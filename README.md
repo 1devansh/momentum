@@ -1,50 +1,146 @@
-# Welcome to your Expo app 👋
+# Momentum
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A personal growth app focused on daily micro-challenges, character-based progress, and positive reinforcement.
 
-## Get started
+## 🌱 Overview
 
-1. Install dependencies
+Momentum helps users build positive habits through:
 
-   ```bash
-   npm install
-   ```
+- **Daily Micro-Challenges**: Small, achievable tasks that compound over time
+- **Character Growth**: Watch your character evolve from a sapling to a tree
+- **Gamification**: Streaks, XP, and achievements to keep you motivated
+- **Premium Features**: Advanced challenges and full character evolution (subscription)
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## 🚀 Quick Start
 
 ```bash
-npm run reset-project
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Run on Android
+npm run android
+
+# Run on iOS
+npm run ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 📁 Project Structure
 
-## Learn more
+```
+momentum/
+├── app/                 # Screens (Expo Router)
+├── src/
+│   ├── config/         # App configuration
+│   ├── state/          # State management (Context)
+│   ├── services/       # External services (RevenueCat)
+│   ├── components/     # Reusable UI components
+│   ├── hooks/          # Custom React hooks
+│   └── features/       # Domain-specific features
+├── docs/               # Documentation
+└── assets/             # Static assets
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture documentation.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🔧 Configuration
 
-## Join the community
+### Environment Variables
 
-Join our community of developers creating universal apps.
+Create a `.env` file (not committed to git):
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```env
+EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=your_key_here
+EXPO_PUBLIC_REVENUECAT_IOS_KEY=your_key_here
+```
+
+### RevenueCat Setup
+
+See [docs/REVENUECAT_SETUP.md](docs/REVENUECAT_SETUP.md) for complete setup instructions.
+
+### Google Play Deployment
+
+See [docs/GOOGLE_PLAY_SETUP.md](docs/GOOGLE_PLAY_SETUP.md) for deployment guide.
+
+## 📱 Screens
+
+| Screen     | Description                    | Status      |
+| ---------- | ------------------------------ | ----------- |
+| Onboarding | First-time user experience     | ✅ Scaffold |
+| Home       | Daily challenge display        | ✅ Scaffold |
+| Progress   | Character growth visualization | ✅ Scaffold |
+| Settings   | User preferences               | ✅ Scaffold |
+| Paywall    | Subscription purchase          | ✅ Scaffold |
+
+## 🏗️ Tech Stack
+
+- **Framework**: Expo (managed workflow)
+- **Language**: TypeScript
+- **Navigation**: Expo Router
+- **State**: React Context
+- **Subscriptions**: RevenueCat
+- **Storage**: AsyncStorage
+
+## 📋 TODO
+
+### High Priority
+
+- [ ] Replace placeholder RevenueCat API keys
+- [ ] Set up Google Play Console app
+- [ ] Configure RevenueCat products
+- [ ] Complete store listing
+
+### Features
+
+- [ ] Implement daily challenge system
+- [ ] Build character growth visualization
+- [ ] Add streak tracking
+- [ ] Implement XP/leveling system
+- [ ] Add push notifications
+
+### Polish
+
+- [ ] Design proper onboarding flow
+- [ ] Add animations and transitions
+- [ ] Implement proper theming
+- [ ] Add haptic feedback
+
+## 🧪 Testing
+
+```bash
+# Run linter
+npm run lint
+
+# Type check
+npx tsc --noEmit
+```
+
+## 📦 Building
+
+```bash
+# Development build
+eas build --platform android --profile development
+
+# Preview build (APK)
+eas build --platform android --profile preview
+
+# Production build (AAB)
+eas build --platform android --profile production
+```
+
+## 🚢 Deployment
+
+```bash
+# Submit to Google Play Internal Testing
+eas submit --platform android --profile production
+```
+
+## 📄 License
+
+Private - All rights reserved
+
+## 🤝 Contributing
+
+This is a private project. Contact the maintainers for contribution guidelines.
