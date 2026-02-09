@@ -2,6 +2,17 @@
 
 This guide walks you through setting up RevenueCat for the Momentum app.
 
+## ⚠️ IMPORTANT: Expo Go Limitations
+
+The RevenueCat SDK (and most native modules) **cannot run inside the standard Expo Go app**.
+
+If you try to run the app in Expo Go, you will see a warning in the console, and purchase-related features will be disabled to prevent the app from crashing.
+
+To test RevenueCat:
+
+1. **Development Builds (Recommended)**: Create a custom development build using `npx expo run:android` or `npx expo run:ios`. This includes the native RevenueCat code.
+2. **Test Store API Key**: RevenueCat provides a "Test Store" API key for limited testing in Expo Go, but it is not recommended for full integration testing.
+
 ## Prerequisites
 
 - RevenueCat account (https://app.revenuecat.com)
@@ -52,19 +63,22 @@ This guide walks you through setting up RevenueCat for the Momentum app.
 3. Set pricing and trial periods
 4. Activate the subscriptions
 
-### In RevenueCat
+### In RevenueCat (CRITICAL)
+
+The error `ConfigurationError` means you need to link your Play Store products to RevenueCat.
 
 1. Go to **Products** in your project
 2. Click **+ New Product**
 3. Add your Google Play product IDs:
    - `momentum_pro_monthly`
    - `momentum_pro_yearly`
+4. **Note**: If you haven't created the product in Google Play yet, RevenueCat won't be able to fetch anything, causing the error you see.
 
 ## Step 5: Create Entitlements
 
 1. Go to **Entitlements** in RevenueCat
 2. Click **+ New Entitlement**
-3. Create entitlement: `pro`
+3. Create entitlement: `Momentum Plus`
 4. Attach your products to this entitlement
 
 ## Step 6: Create Offerings
@@ -85,7 +99,7 @@ export const REVENUECAT_CONFIG = {
   apiKeyIOS: "appl_YOUR_ACTUAL_KEY",
 
   entitlements: {
-    PRO: "pro", // Must match RevenueCat entitlement ID
+    PRO: "Momentum Plus", // Must match RevenueCat entitlement ID
   },
 
   offerings: {

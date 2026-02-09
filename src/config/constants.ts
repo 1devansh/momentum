@@ -20,7 +20,7 @@ export const REVENUECAT_CONFIG = {
 
   // TODO: Update these to match your RevenueCat entitlement identifiers
   entitlements: {
-    PRO: "pro", // Main premium entitlement
+    PRO: "Momentum Plus", // Main premium entitlement
     // TODO: Add more entitlements as needed (e.g., 'premium_packs')
   },
 
@@ -32,7 +32,7 @@ export const REVENUECAT_CONFIG = {
 
   // TODO: Update these to match your product identifiers in Play Console / App Store Connect
   products: {
-    MONTHLY: "momentum_pro_monthly",
+    MONTHLY: "momentum_plus_monthly",
     YEARLY: "momentum_pro_yearly",
     // TODO: Add lifetime purchase if applicable
   },

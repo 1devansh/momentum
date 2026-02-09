@@ -5,26 +5,27 @@
  * Uses React Context for simplicity and scalability.
  */
 
+import Constants from "expo-constants";
 import React, {
-    createContext,
-    ReactNode,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 import {
-    CustomerInfo,
-    PurchasesOffering,
-    PurchasesPackage,
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage,
 } from "react-native-purchases";
 import {
-    addCustomerInfoUpdateListener,
-    checkProEntitlement,
-    getCustomerInfo,
-    getOfferings,
-    purchasePackage,
-    restorePurchases,
+  addCustomerInfoUpdateListener,
+  checkProEntitlement,
+  getCustomerInfo,
+  getOfferings,
+  purchasePackage,
+  restorePurchases,
 } from "../../services/purchases";
 
 // Types
@@ -79,6 +80,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   // Refresh subscription status
   const refreshSubscriptionStatus = useCallback(async () => {
     try {
+      // Skip if running in Expo Go as Purchases won't be initialized
+      if (Constants.appOwnership === "expo") {
+        console.log("[SubscriptionContext] Skipping refresh in Expo Go");
+        updateState({ isLoading: false });
+        return;
+      }
+
       updateState({ isLoading: true, error: null });
 
       const [isPro, customerInfo] = await Promise.all([
@@ -103,6 +111,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   // Fetch offerings
   const fetchOfferings = useCallback(async () => {
     try {
+      // Skip if running in Expo Go
+      if (Constants.appOwnership === "expo") {
+        return;
+      }
+
       const offering = await getOfferings();
       updateState({ currentOffering: offering });
     } catch (error) {
@@ -114,6 +127,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   const purchase = useCallback(
     async (pkg: PurchasesPackage): Promise<boolean> => {
       try {
+        // Skip if running in Expo Go
+        if (Constants.appOwnership === "expo") {
+          alert(
+            "Purchases are not available in Expo Go. Please use a Development Build.",
+          );
+          return false;
+        }
+
         updateState({ isLoading: true, error: null });
 
         const customerInfo = await purchasePackage(pkg);
@@ -146,6 +167,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   // Restore purchases
   const restore = useCallback(async (): Promise<boolean> => {
     try {
+      // Skip if running in Expo Go
+      if (Constants.appOwnership === "expo") {
+        return false;
+      }
+
       updateState({ isLoading: true, error: null });
 
       await restorePurchases();

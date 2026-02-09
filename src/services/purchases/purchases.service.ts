@@ -7,11 +7,12 @@
  * Documentation: https://docs.revenuecat.com/docs/reactnative
  */
 
+import Constants from "expo-constants";
 import Purchases, {
-    CustomerInfo,
-    LOG_LEVEL,
-    PurchasesOffering,
-    PurchasesPackage,
+  CustomerInfo,
+  LOG_LEVEL,
+  PurchasesOffering,
+  PurchasesPackage,
 } from "react-native-purchases";
 import { REVENUECAT_CONFIG } from "../../config/constants";
 import { IS_DEV, getRevenueCatApiKey } from "../../config/env";
@@ -38,6 +39,18 @@ export const initializePurchases = async (): Promise<void> => {
     }
 
     const apiKey = getRevenueCatApiKey();
+
+    // Handle Expo Go / Development environment
+    // RevenueCat native SDKs do not work in Expo Go.
+    // They require a Development Build (prebuild).
+    if (Constants.appOwnership === "expo") {
+      console.warn(
+        "[Purchases] Running in Expo Go. RevenueCat native module is NOT available. " +
+          "Use a Development Build to test actual in-app purchases.",
+      );
+      isInitialized = true; // Mark as initialized to prevent further errors
+      return;
+    }
 
     // TODO: Validate API key before configuring
     if (apiKey.includes("YOUR_")) {

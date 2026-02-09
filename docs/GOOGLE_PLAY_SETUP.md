@@ -2,6 +2,61 @@
 
 This guide walks you through deploying Momentum to Google Play Internal Testing.
 
+## ⚠️ Local Environment Setup (Android SDK)
+
+To run the app locally using `npx expo run:android`, you must have the Android SDK installed and configured on your machine.
+
+1. **Install Android Studio**: Download and install from [developer.android.com](https://developer.android.com/studio).
+2. **Install SDK Platform**: In Android Studio, go to **SDK Manager** and install the latest Android API level.
+3. **Set Environment Variables**:
+   - Set `ANDROID_HOME` to your SDK location (usually `C:\Users\<YourUser>\AppData\Local\Android\Sdk`).
+   - Add `%ANDROID_HOME%\platform-tools` to your system `PATH` (this provides the `adb` command).
+4. **Restart Terminal**: After setting variables, restart your terminal/VS Code.
+
+---
+
+## Step 4: Build and Test
+
+### 1. Create a Development Build (Cloud)
+
+Since you don't have the Android SDK locally, you can use EAS to build in the cloud:
+
+```bash
+eas build --profile development --platform android
+```
+
+### 2. How to Test the Build
+
+When the build is finished, EAS will provide a link to download an **APK** or a QR code.
+
+- **Testing on your Phone (Recommended)**:
+  1.  Scan the QR code or download the APK file to your Android phone.
+  2.  Install the APK (you may need to "Allow from unknown sources").
+  3.  Open the app. It will look like Expo Go but it's your custom **Development Client**.
+  4.  Start your local dev server: `npx expo start`.
+  5.  In the app on your phone, connect to your local server.
+  - _Benefit_: This build includes the RevenueCat native code, so you can test the full purchase flow.
+
+- **Testing on an Emulator**:
+  1.  You would need to install Android Studio and an Emulator first.
+  2.  Once installed, you can drag and drop the downloaded APK onto the emulator.
+
+---
+
+## Step 5: Google Play Internal Testing Link
+
+### ⚠️ CRITICAL: Fixing "This version of the application is not configured for billing"
+
+If you see this error when trying to purchase, it means Google Play is blocking the request because the app hasn't been "authorized" yet.
+
+1.  **Upload to Internal Testing**: You **must** upload your production build (`.aab`) to the Google Play Console under **Testing > Internal testing**.
+2.  **Add Your Email as a Tester**: In the Google Play Console, add your own email address to the list of internal testers.
+3.  **Join the Test**: Open the **Internal Testing Link** on your phone and click **"Join on Android"**. This "registers" your device/account as a valid tester.
+4.  **Wait for Review**: Even for internal testing, Google sometimes takes a few hours to "review" the first build.
+5.  **Check Package Name**: Ensure the package name in `app.config.ts` (`com.devbuilds.momentum`) exactly matches the one in the Google Play Console.
+
+---
+
 ## Prerequisites
 
 - Google Play Console access
