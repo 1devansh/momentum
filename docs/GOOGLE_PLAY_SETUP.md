@@ -57,6 +57,24 @@ If you see this error when trying to purchase, it means Google Play is blocking 
 
 ---
 
+## Step 6: Testing Subscriptions (Sandbox)
+
+**DO NOT use your actual credit card.** Since you are an authorized internal tester, you can use "License Testing" to test for free.
+
+1.  **Configure License Testing**:
+    - In the Google Play Console, go to **Setup > License testing**.
+    - Add your email address to the "License testers" list.
+    - Ensure "License response" is set to `RESPOND_NORMALLY`.
+2.  **Test the Purchase**:
+    - Open the app on your phone.
+    - When the Google Play payment sheet appears, it should say **"Test instrument, always approves"** or **"Test card"**.
+    - If it asks for a real payment method, **STOP**. Double-check that your email is in the License Testing list and that you have joined the internal test via the link.
+3.  **Manage Test Subscriptions**:
+    - Test subscriptions renew much faster (e.g., a monthly sub might renew every 5 minutes).
+    - You can cancel or reset test purchases in the **Google Play Store app > Payments & subscriptions > Subscriptions**.
+
+---
+
 ## Prerequisites
 
 - Google Play Console access

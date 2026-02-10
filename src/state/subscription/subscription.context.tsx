@@ -74,6 +74,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
 
   // Update state helper
   const updateState = useCallback((updates: Partial<SubscriptionState>) => {
+    console.log(
+      "[SubscriptionContext] Updating state:",
+      Object.keys(updates).join(", "),
+    );
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
@@ -87,6 +91,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         return;
       }
 
+      console.log("[SubscriptionContext] Refreshing subscription status...");
       updateState({ isLoading: true, error: null });
 
       const [isPro, customerInfo] = await Promise.all([
@@ -94,6 +99,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         getCustomerInfo(),
       ]);
 
+      console.log("[SubscriptionContext] Refresh complete. Is Pro:", isPro);
       updateState({
         isPro,
         customerInfo,
@@ -116,6 +122,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         return;
       }
 
+      console.log("[SubscriptionContext] Fetching offerings...");
       const offering = await getOfferings();
       updateState({ currentOffering: offering });
     } catch (error) {
@@ -135,11 +142,19 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
           return false;
         }
 
+        console.log(
+          "[SubscriptionContext] Initiating purchase for:",
+          pkg.identifier,
+        );
         updateState({ isLoading: true, error: null });
 
         const customerInfo = await purchasePackage(pkg);
         const isPro = await checkProEntitlement();
 
+        console.log(
+          "[SubscriptionContext] Purchase flow complete. New Pro Status:",
+          isPro,
+        );
         updateState({
           isPro,
           customerInfo,
@@ -153,6 +168,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
             ? "Purchase cancelled"
             : "Purchase failed. Please try again.";
 
+        console.warn("[SubscriptionContext] Purchase failed:", errorMessage);
         updateState({
           isLoading: false,
           error: errorMessage,
@@ -172,12 +188,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
         return false;
       }
 
+      console.log("[SubscriptionContext] Restoring purchases...");
       updateState({ isLoading: true, error: null });
 
-      await restorePurchases();
+      const customerInfo = await restorePurchases();
       const isPro = await checkProEntitlement();
-      const customerInfo = await getCustomerInfo();
 
+      console.log(
+        "[SubscriptionContext] Restore complete. New Pro Status:",
+        isPro,
+      );
       updateState({
         isPro,
         customerInfo,
@@ -195,16 +215,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     }
   }, [updateState]);
 
-  // Initialize on mount
+  // Initial load
   useEffect(() => {
     refreshSubscriptionStatus();
     fetchOfferings();
 
-    // Listen for customer info updates
-    const unsubscribe = addCustomerInfoUpdateListener((customerInfo) => {
-      checkProEntitlement().then((isPro) => {
-        updateState({ isPro, customerInfo });
-      });
+    // Listen for customer info updates (e.g., from other devices or web)
+    const unsubscribe = addCustomerInfoUpdateListener((info) => {
+      console.log("[SubscriptionContext] Customer info updated from listener");
+      const isPro = info.entitlements.active["Momentum Plus"] !== undefined;
+      updateState({ isPro, customerInfo: info });
     });
 
     return () => {
@@ -212,33 +232,30 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
     };
   }, [refreshSubscriptionStatus, fetchOfferings, updateState]);
 
-  const value: SubscriptionContextValue = {
-    ...state,
-    refreshSubscriptionStatus,
-    purchase,
-    restore,
-    fetchOfferings,
-  };
-
   return (
-    <SubscriptionContext.Provider value={value}>
+    <SubscriptionContext.Provider
+      value={{
+        ...state,
+        refreshSubscriptionStatus,
+        purchase,
+        restore,
+        fetchOfferings,
+      }}
+    >
       {children}
     </SubscriptionContext.Provider>
   );
 };
 
 /**
- * Hook to access subscription state
- * Must be used within SubscriptionProvider
+ * Hook to use subscription context
  */
-export const useSubscription = (): SubscriptionContextValue => {
+export const useSubscription = () => {
   const context = useContext(SubscriptionContext);
-
   if (context === undefined) {
     throw new Error(
       "useSubscription must be used within a SubscriptionProvider",
     );
   }
-
   return context;
 };

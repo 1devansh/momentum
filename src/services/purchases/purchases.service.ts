@@ -67,7 +67,10 @@ export const initializePurchases = async (): Promise<void> => {
     });
 
     isInitialized = true;
-    console.log("[Purchases] Initialized successfully");
+    console.log(
+      "[Purchases] Initialized successfully with API Key:",
+      apiKey.substring(0, 8) + "...",
+    );
   } catch (error) {
     console.error("[Purchases] Initialization failed:", error);
     throw error;
@@ -81,10 +84,13 @@ export const initializePurchases = async (): Promise<void> => {
  */
 export const checkProEntitlement = async (): Promise<boolean> => {
   try {
+    console.log("[Purchases] Checking pro entitlement...");
     const customerInfo = await Purchases.getCustomerInfo();
     const proEntitlement =
       customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlements.PRO];
-    return proEntitlement !== undefined;
+    const isPro = proEntitlement !== undefined;
+    console.log("[Purchases] Is Pro User:", isPro);
+    return isPro;
   } catch (error) {
     console.error("[Purchases] Error checking entitlement:", error);
     return false;
@@ -97,7 +103,13 @@ export const checkProEntitlement = async (): Promise<boolean> => {
  * @returns Promise<CustomerInfo>
  */
 export const getCustomerInfo = async (): Promise<CustomerInfo> => {
-  return Purchases.getCustomerInfo();
+  console.log("[Purchases] Fetching customer info...");
+  const info = await Purchases.getCustomerInfo();
+  console.log(
+    "[Purchases] Customer Info received for ID:",
+    info.originalAppUserId,
+  );
+  return info;
 };
 
 /**
@@ -107,14 +119,20 @@ export const getCustomerInfo = async (): Promise<CustomerInfo> => {
  */
 export const getOfferings = async (): Promise<PurchasesOffering | null> => {
   try {
+    console.log("[Purchases] Fetching offerings...");
     const offerings = await Purchases.getOfferings();
-
-    if (!offerings.current) {
-      console.warn("[Purchases] No current offering available");
-      return null;
+    if (offerings.current) {
+      console.log(
+        "[Purchases] Current offering found:",
+        offerings.current.identifier,
+        "with",
+        offerings.current.availablePackages.length,
+        "packages",
+      );
+      return offerings.current;
     }
-
-    return offerings.current;
+    console.warn("[Purchases] No current offering found");
+    return null;
   } catch (error) {
     console.error("[Purchases] Error fetching offerings:", error);
     return null;
@@ -124,95 +142,55 @@ export const getOfferings = async (): Promise<PurchasesOffering | null> => {
 /**
  * Purchase a package
  *
- * @param pkg - The package to purchase
+ * @param pkg The package to purchase
  * @returns Promise<CustomerInfo>
  */
 export const purchasePackage = async (
   pkg: PurchasesPackage,
 ): Promise<CustomerInfo> => {
   try {
+    console.log("[Purchases] Starting purchase for package:", pkg.identifier);
     const { customerInfo } = await Purchases.purchasePackage(pkg);
+    console.log("[Purchases] Purchase successful!");
     return customerInfo;
   } catch (error: any) {
-    // Handle user cancellation gracefully
-    if (error.userCancelled) {
-      console.log("[Purchases] User cancelled purchase");
-      throw new Error("PURCHASE_CANCELLED");
+    if (!error.userCancelled) {
+      console.error("[Purchases] Purchase error:", error);
+    } else {
+      console.log("[Purchases] User cancelled the purchase");
     }
-
-    console.error("[Purchases] Purchase failed:", error);
     throw error;
   }
 };
 
 /**
- * Restore previous purchases
+ * Restore purchases
  *
  * @returns Promise<CustomerInfo>
  */
 export const restorePurchases = async (): Promise<CustomerInfo> => {
   try {
+    console.log("[Purchases] Restoring purchases...");
     const customerInfo = await Purchases.restorePurchases();
-    console.log("[Purchases] Purchases restored successfully");
+    console.log("[Purchases] Restore successful");
     return customerInfo;
   } catch (error) {
-    console.error("[Purchases] Restore failed:", error);
+    console.error("[Purchases] Restore error:", error);
     throw error;
   }
 };
 
 /**
- * Identify user (for user authentication)
- * Call this when user logs in
+ * Add a listener for customer info updates
  *
- * TODO: Implement when user authentication is added
- *
- * @param userId - Unique user identifier
- */
-export const identifyUser = async (userId: string): Promise<CustomerInfo> => {
-  try {
-    const { customerInfo } = await Purchases.logIn(userId);
-    console.log("[Purchases] User identified:", userId);
-    return customerInfo;
-  } catch (error) {
-    console.error("[Purchases] User identification failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Log out user (reset to anonymous)
- * Call this when user logs out
- *
- * TODO: Implement when user authentication is added
- */
-export const logOutUser = async (): Promise<CustomerInfo> => {
-  try {
-    const customerInfo = await Purchases.logOut();
-    console.log("[Purchases] User logged out");
-    return customerInfo;
-  } catch (error) {
-    console.error("[Purchases] Logout failed:", error);
-    throw error;
-  }
-};
-
-/**
- * Add listener for customer info updates
- * Useful for real-time subscription status updates
- *
- * @param listener - Callback function
+ * @param listener Callback function
  * @returns Unsubscribe function
  */
 export const addCustomerInfoUpdateListener = (
   listener: (customerInfo: CustomerInfo) => void,
-): (() => void) => {
+) => {
   Purchases.addCustomerInfoUpdateListener(listener);
-
-  // Return unsubscribe function
   return () => {
-    // Note: RevenueCat SDK doesn't provide a direct remove listener method
-    // The listener will be cleaned up when the component unmounts
-    // TODO: Track listeners manually if needed for cleanup
+    Purchases.removeCustomerInfoUpdateListener(listener);
   };
 };
