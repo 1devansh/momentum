@@ -1,8 +1,8 @@
 /**
  * Onboarding Layout
  *
- * Layout for the onboarding flow.
- * TODO: Add shared onboarding navigation if needed
+ * Stack navigator for the multi-step onboarding flow.
+ * Uses slide_from_right animation for forward momentum feel.
  */
 
 import { Stack } from "expo-router";
@@ -12,7 +12,8 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: "fade",
+        animation: "slide_from_right",
+        gestureEnabled: false,
       }}
     />
   );

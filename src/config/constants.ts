@@ -54,6 +54,8 @@ export const STORAGE_KEYS = {
   USER_PREFERENCES: "@momentum/user_preferences",
   USER_PROFILE: "@momentum/user_profile",
   EXTENDED_USER_PROFILE: "@momentum/extended_user_profile",
+  ONBOARDING_FOCUS_AREAS: "@momentum/onboarding_focus_areas",
+  ONBOARDING_GOAL: "@momentum/onboarding_goal",
   // TODO: Add more storage keys as features are implemented
 } as const;
 
