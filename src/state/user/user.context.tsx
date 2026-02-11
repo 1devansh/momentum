@@ -7,23 +7,25 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
-    createContext,
-    ReactNode,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 import { STORAGE_KEYS } from "../../config/constants";
+import {
+  clearUserProfile,
+  getOrCreateUserProfile,
+  getUserProfile,
+  UserProfile,
+} from "../../services/auth";
 
 // Types
-// TODO: Expand UserPreferences as features are added
 interface UserPreferences {
-  // TODO: Add notification preferences
   notificationsEnabled: boolean;
-  // TODO: Add theme preference
   theme: "light" | "dark" | "system";
-  // TODO: Add challenge preferences
   dailyReminderTime: string | null;
 }
 
@@ -31,17 +33,15 @@ interface UserState {
   hasOnboarded: boolean;
   isLoading: boolean;
   preferences: UserPreferences;
-  // TODO: Add user profile data when authentication is implemented
-  // profile: UserProfile | null;
+  profile: UserProfile | null;
 }
 
 interface UserContextValue extends UserState {
   completeOnboarding: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
-  // TODO: Add authentication methods
-  // signIn: (credentials: Credentials) => Promise<void>;
-  // signOut: () => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 // Default preferences
@@ -56,6 +56,7 @@ const defaultState: UserState = {
   hasOnboarded: false,
   isLoading: true,
   preferences: defaultPreferences,
+  profile: null,
 };
 
 // Create context
@@ -82,9 +83,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   useEffect(() => {
     const loadPersistedState = async () => {
       try {
-        const [hasOnboardedStr, preferencesStr] = await Promise.all([
+        const [hasOnboardedStr, preferencesStr, profile] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.HAS_ONBOARDED),
           AsyncStorage.getItem(STORAGE_KEYS.USER_PREFERENCES),
+          getOrCreateUserProfile(), // Get or create user profile
         ]);
 
         const hasOnboarded = hasOnboardedStr === "true";
@@ -95,6 +97,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         updateState({
           hasOnboarded,
           preferences,
+          profile,
           isLoading: false,
         });
       } catch (error) {
@@ -143,11 +146,42 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     [state.preferences, updateState],
   );
 
+  // Refresh user profile
+  const refreshProfile = useCallback(async () => {
+    try {
+      const profile = await getUserProfile();
+      updateState({ profile });
+    } catch (error) {
+      console.error("[UserContext] Error refreshing profile:", error);
+    }
+  }, [updateState]);
+
+  // Sign out (clear user data)
+  const signOut = useCallback(async () => {
+    try {
+      await Promise.all([
+        clearUserProfile(),
+        AsyncStorage.removeItem(STORAGE_KEYS.HAS_ONBOARDED),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES),
+      ]);
+      updateState({
+        hasOnboarded: false,
+        preferences: defaultPreferences,
+        profile: null,
+      });
+      console.log("[UserContext] User signed out successfully");
+    } catch (error) {
+      console.error("[UserContext] Error signing out:", error);
+    }
+  }, [updateState]);
+
   const value: UserContextValue = {
     ...state,
     completeOnboarding,
     resetOnboarding,
     updatePreferences,
+    refreshProfile,
+    signOut,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

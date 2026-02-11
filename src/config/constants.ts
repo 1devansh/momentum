@@ -52,6 +52,7 @@ export const ROUTES = {
 export const STORAGE_KEYS = {
   HAS_ONBOARDED: "@momentum/has_onboarded",
   USER_PREFERENCES: "@momentum/user_preferences",
+  USER_PROFILE: "@momentum/user_profile",
   // TODO: Add more storage keys as features are implemented
 } as const;
 

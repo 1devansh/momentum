@@ -16,12 +16,13 @@ import Purchases, {
 } from "react-native-purchases";
 import { REVENUECAT_CONFIG } from "../../config/constants";
 import { IS_DEV, getRevenueCatApiKey } from "../../config/env";
+import { getOrCreateUserProfile } from "../auth";
 
 // Track initialization state
 let isInitialized = false;
 
 /**
- * Initialize RevenueCat SDK
+ * Initialize RevenueCat SDK with user authentication
  * Call this once at app startup (in _layout.tsx or App.tsx)
  *
  * @returns Promise<void>
@@ -52,7 +53,7 @@ export const initializePurchases = async (): Promise<void> => {
       return;
     }
 
-    // TODO: Validate API key before configuring
+    // Validate API key before configuring
     if (apiKey.includes("YOUR_")) {
       console.warn(
         "[Purchases] Using placeholder API key. " +
@@ -60,16 +61,21 @@ export const initializePurchases = async (): Promise<void> => {
       );
     }
 
+    // Get or create user profile to get unique user ID
+    const userProfile = await getOrCreateUserProfile();
+    console.log("[Purchases] Configuring with user ID:", userProfile.userId);
+
     await Purchases.configure({
       apiKey,
-      // TODO: If you have user authentication, set the appUserID here
-      // appUserID: 'your-user-id',
+      appUserID: userProfile.userId, // Set unique user ID for RevenueCat
     });
 
     isInitialized = true;
     console.log(
       "[Purchases] Initialized successfully with API Key:",
       apiKey.substring(0, 8) + "...",
+      "and User ID:",
+      userProfile.userId,
     );
   } catch (error) {
     console.error("[Purchases] Initialization failed:", error);
