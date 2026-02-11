@@ -29,10 +29,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
-    // TODO: Add iOS-specific config
-    // infoPlist: {
-    //   NSCameraUsageDescription: 'Used for...',
-    // },
+    infoPlist: {
+      NSFaceIDUsageDescription:
+        "Allow Momentum to use Face ID for app security.",
+      NSCameraUsageDescription:
+        "Allow Momentum to access your camera for profile pictures.",
+      NSPhotoLibraryUsageDescription:
+        "Allow Momentum to access your photo library for profile pictures.",
+      NSMicrophoneUsageDescription: "Microphone access is not required.",
+      UIBackgroundModes: ["remote-notification"],
+    },
   },
 
   // Android Configuration
@@ -45,10 +51,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     edgeToEdgeEnabled: true,
-    // TODO: Add permissions as needed
-    // permissions: [
-    //   'NOTIFICATIONS',
-    // ],
+    permissions: [
+      "USE_BIOMETRIC",
+      "USE_FINGERPRINT",
+      "VIBRATE",
+      "RECEIVE_BOOT_COMPLETED",
+      "SCHEDULE_EXACT_ALARM",
+      "POST_NOTIFICATIONS",
+      "CAMERA",
+      "READ_EXTERNAL_STORAGE",
+      "WRITE_EXTERNAL_STORAGE",
+    ],
   },
 
   // Web Configuration (optional)
@@ -60,6 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // Plugins
   plugins: [
     "expo-router",
+    "expo-secure-store",
     [
       "expo-splash-screen",
       {
@@ -70,6 +84,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         dark: {
           backgroundColor: "#000000",
         },
+      },
+    ],
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png",
+        color: "#4CAF50",
+        defaultChannel: "default",
+      },
+    ],
+    [
+      "expo-local-authentication",
+      {
+        faceIDPermission: "Allow Momentum to use Face ID for app security.",
       },
     ],
     // RevenueCat plugin (required for native builds)

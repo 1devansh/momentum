@@ -6,42 +6,20 @@
  */
 
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { ScreenContainer } from "../../src/components";
 import { useSubscription } from "../../src/state/subscription";
 import { useUser } from "../../src/state/user";
 
 export default function DebugScreen() {
-  const { profile, preferences, hasOnboarded, signOut, resetOnboarding } =
-    useUser();
+  const { profile, preferences, hasOnboarded, resetOnboarding } = useUser();
   const { isPro, isLoading: subLoading } = useSubscription();
-
-  const handleSignOut = async () => {
-    Alert.alert(
-      "Sign Out",
-      "This will clear all user data and create a new user ID. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            await signOut();
-            Alert.alert(
-              "Success",
-              "User data cleared. Restart the app to see changes.",
-            );
-          },
-        },
-      ],
-    );
-  };
 
   const handleResetOnboarding = async () => {
     await resetOnboarding();
@@ -96,8 +74,8 @@ export default function DebugScreen() {
           />
           <InfoRow label="Theme" value={preferences.theme} />
           <InfoRow
-            label="Reminder Time"
-            value={preferences.dailyReminderTime || "Not set"}
+            label="Reminders"
+            value={`${preferences.dailyReminders.length} configured`}
           />
         </View>
 
@@ -110,15 +88,6 @@ export default function DebugScreen() {
             onPress={handleResetOnboarding}
           >
             <Text style={styles.buttonText}>Reset Onboarding</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton]}
-            onPress={handleSignOut}
-          >
-            <Text style={[styles.buttonText, styles.dangerButtonText]}>
-              Sign Out (Clear All Data)
-            </Text>
           </TouchableOpacity>
         </View>
 

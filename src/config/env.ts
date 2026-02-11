@@ -78,3 +78,11 @@ export const getRevenueCatApiKey = (): string => {
   }
   return process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? "YOUR_IOS_KEY";
 };
+
+/**
+ * Feature flags
+ */
+export const FEATURE_FLAGS = {
+  enableDebugScreen:
+    process.env.EXPO_PUBLIC_ENABLE_DEBUG_SCREEN === "true" || __DEV__,
+};

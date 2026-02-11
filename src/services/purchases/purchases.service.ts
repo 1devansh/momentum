@@ -200,3 +200,47 @@ export const addCustomerInfoUpdateListener = (
     Purchases.removeCustomerInfoUpdateListener(listener);
   };
 };
+
+/**
+ * Sync user attributes to RevenueCat
+ * This helps track users in the RevenueCat dashboard
+ *
+ * @param attributes User attributes to sync
+ */
+export const syncUserAttributesToRevenueCat = async (attributes: {
+  name?: string;
+  email?: string;
+  [key: string]: string | undefined;
+}): Promise<void> => {
+  try {
+    if (!isInitialized) {
+      console.warn("[Purchases] Not initialized, skipping attribute sync");
+      return;
+    }
+
+    console.log("[Purchases] Syncing user attributes to RevenueCat...");
+
+    // Set attributes
+    if (attributes.name) {
+      await Purchases.setDisplayName(attributes.name);
+    }
+    if (attributes.email) {
+      await Purchases.setEmail(attributes.email);
+    }
+
+    // Set custom attributes
+    const customAttributes = Object.entries(attributes).filter(
+      ([key]) => key !== "name" && key !== "email",
+    );
+
+    for (const [key, value] of customAttributes) {
+      if (value) {
+        await Purchases.setAttributes({ [key]: value });
+      }
+    }
+
+    console.log("[Purchases] User attributes synced successfully");
+  } catch (error) {
+    console.error("[Purchases] Error syncing user attributes:", error);
+  }
+};

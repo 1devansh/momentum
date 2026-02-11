@@ -53,17 +53,8 @@ export const STORAGE_KEYS = {
   HAS_ONBOARDED: "@momentum/has_onboarded",
   USER_PREFERENCES: "@momentum/user_preferences",
   USER_PROFILE: "@momentum/user_profile",
+  EXTENDED_USER_PROFILE: "@momentum/extended_user_profile",
   // TODO: Add more storage keys as features are implemented
-} as const;
-
-// Feature Flags
-// TODO: Consider using a remote config service for production
-export const FEATURE_FLAGS = {
-  // TODO: Enable these as features are implemented
-  DAILY_CHALLENGES: false,
-  CHARACTER_GROWTH: false,
-  AI_SUGGESTIONS: false,
-  PREMIUM_PACKS: false,
 } as const;
 
 // Theme Colors (placeholder)

@@ -2,6 +2,7 @@
  * Hooks barrel export
  */
 export { useAppState } from "./useAppState";
+export { useBackToTab } from "./useBackToTab";
 
 // Note: useSubscription and useUser are exported from '../state'
 // Import them directly from 'src/state' to avoid duplicate exports

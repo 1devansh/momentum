@@ -8,6 +8,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { COLORS } from "../../src/config";
+import { FEATURE_FLAGS } from "../../src/config/env";
 
 export default function MainLayout() {
   return (
@@ -54,6 +55,29 @@ export default function MainLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),
+        }}
+      />
+      {FEATURE_FLAGS.enableDebugScreen && (
+        <Tabs.Screen
+          name="debug"
+          options={{
+            title: "Debug",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="bug-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reminders"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

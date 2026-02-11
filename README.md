@@ -27,6 +27,8 @@ npm run android
 npm run ios
 ```
 
+Note: Some features require a development build (not Expo Go). See [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md) for complete setup instructions.
+
 ## 📁 Project Structure
 
 ```
@@ -52,9 +54,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed architecture docum
 Create a `.env` file (not committed to git):
 
 ```env
+# RevenueCat API Keys
 EXPO_PUBLIC_REVENUECAT_ANDROID_KEY=your_key_here
 EXPO_PUBLIC_REVENUECAT_IOS_KEY=your_key_here
+
+# Feature Flags
+EXPO_PUBLIC_ENABLE_DEBUG_SCREEN=true
 ```
+
+See `.env.example` for all available options.
 
 ### RevenueCat Setup
 
@@ -64,6 +72,18 @@ See [docs/REVENUECAT_SETUP.md](docs/REVENUECAT_SETUP.md) for complete setup inst
 
 See [docs/GOOGLE_PLAY_SETUP.md](docs/GOOGLE_PLAY_SETUP.md) for deployment guide.
 
+### User Settings & Profile
+
+See [docs/USER_SETTINGS.md](docs/USER_SETTINGS.md) for user settings and profile features documentation.
+
+### Package Documentation
+
+See [docs/PACKAGES.md](docs/PACKAGES.md) for complete package list and usage guide.
+
+### Setup Guide
+
+See [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md) for complete setup instructions including native features.
+
 ## 📱 Screens
 
 | Screen     | Description                    | Status      |
@@ -71,17 +91,40 @@ See [docs/GOOGLE_PLAY_SETUP.md](docs/GOOGLE_PLAY_SETUP.md) for deployment guide.
 | Onboarding | First-time user experience     | ✅ Scaffold |
 | Home       | Daily challenge display        | ✅ Scaffold |
 | Progress   | Character growth visualization | ✅ Scaffold |
-| Settings   | User preferences               | ✅ Scaffold |
+| Settings   | User preferences & profile     | ✅ Complete |
+| Profile    | User profile management        | ✅ Complete |
+| Reminders  | Daily reminder configuration   | ✅ Complete |
 | Paywall    | Subscription purchase          | ✅ Scaffold |
+| Debug      | Development debugging tools    | ✅ Complete |
 
 ## 🏗️ Tech Stack
 
 - **Framework**: Expo (managed workflow)
 - **Language**: TypeScript
 - **Navigation**: Expo Router
-- **State**: React Context
+- **State**: React Context + Zustand
 - **Subscriptions**: RevenueCat
-- **Storage**: AsyncStorage
+- **Storage**: AsyncStorage + Secure Store
+- **Animations**: Reanimated + Lottie
+- **Charts**: Victory Native
+- **Notifications**: Expo Notifications
+- **UI**: React Native + Custom Components
+
+### Key Packages
+
+- **zustand** - Lightweight state management
+- **date-fns** - Date utilities and formatting
+- **lottie-react-native** - JSON-based animations
+- **victory-native** - Charts and data visualization
+- **expo-notifications** - Local and push notifications
+- **expo-secure-store** - Encrypted storage
+- **expo-local-authentication** - Biometric auth
+- **expo-linear-gradient** - Gradient backgrounds
+- **expo-blur** - Blur effects
+- **expo-av** - Audio playback
+- **react-native-svg** - SVG rendering
+
+See [docs/PACKAGES.md](docs/PACKAGES.md) for complete package documentation.
 
 ## 📋 TODO
 
@@ -99,6 +142,18 @@ See [docs/GOOGLE_PLAY_SETUP.md](docs/GOOGLE_PLAY_SETUP.md) for deployment guide.
 - [ ] Add streak tracking
 - [ ] Implement XP/leveling system
 - [ ] Add push notifications
+- [ ] Implement theme UI changes (preference storage complete)
+- [ ] Schedule notifications for reminders
+
+### Completed ✅
+
+- [x] User profile management (name, email)
+- [x] Multiple daily reminders
+- [x] Theme preference selection
+- [x] Notification toggle
+- [x] Sign out functionality
+- [x] RevenueCat user attribute sync
+- [x] Debug screen feature flag
 
 ### Polish
 
