@@ -3,21 +3,22 @@
  *
  * First challenge experience right after onboarding.
  * Uses the actual challenge from the generated plan.
+ * Includes optional notes input.
  */
 
 import { Href, router } from "expo-router";
 import React, { useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { Button, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
 import {
-    selectCurrentChallenge,
-    useGoalPlanStore,
+  selectCurrentChallenge,
+  useGoalPlanStore,
 } from "../../src/features/challenges";
 
 const AFFIRMATIONS = [
-  "You showed up. That&apos;s what matters.",
+  "You showed up. That matters.",
   "One small step today, a giant leap over time.",
   "You just proved you can do hard things.",
   "The hardest part is starting. You did it.",
@@ -25,6 +26,7 @@ const AFFIRMATIONS = [
 
 export default function BraveMoveScreen() {
   const [completed, setCompleted] = useState(false);
+  const [notes, setNotes] = useState("");
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [affirmation] = useState(
     () => AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)],
@@ -40,7 +42,7 @@ export default function BraveMoveScreen() {
 
   const handleComplete = () => {
     if (activePlanId) {
-      completeCurrentChallenge(activePlanId);
+      completeCurrentChallenge(activePlanId, notes);
     }
     setCompleted(true);
     confettiRef.current?.start();
@@ -64,6 +66,17 @@ export default function BraveMoveScreen() {
                 {challenge?.description ??
                   "Open your goal plan and read through your first challenge. Then do it."}
               </Text>
+              <TextInput
+                style={styles.notesInput}
+                placeholder="Any thoughts or reflections? (optional)"
+                placeholderTextColor={COLORS.textSecondary}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                maxLength={500}
+                textAlignVertical="top"
+                accessibilityLabel="Challenge notes"
+              />
             </View>
           </>
         ) : (
@@ -133,6 +146,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textSecondary,
     lineHeight: 24,
+  },
+  notesInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: COLORS.text,
+    minHeight: 60,
+    marginTop: 16,
+    lineHeight: 20,
   },
   celebrationContent: { alignItems: "center" },
   celebrationEmoji: { fontSize: 80, marginBottom: 20 },

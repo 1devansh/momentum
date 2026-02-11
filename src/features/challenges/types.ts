@@ -12,6 +12,7 @@ export interface MicroChallenge {
   order: number;
   completed: boolean;
   completedAt?: string; // ISO date
+  notes?: string; // user's thoughts on completion
 }
 
 export interface GoalPlan {

@@ -22,7 +22,7 @@ interface GoalPlanActions {
   /** Set the active plan */
   setActivePlan: (planId: string) => void;
   /** Mark the current challenge as complete and advance */
-  completeCurrentChallenge: (planId: string) => void;
+  completeCurrentChallenge: (planId: string, notes?: string) => void;
   /** Delete a goal plan */
   deletePlan: (planId: string) => void;
   /** Regenerate challenges for a plan (premium) */
@@ -104,7 +104,7 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
     saveGoalPlans(updatedPlans);
   },
 
-  completeCurrentChallenge: (planId) => {
+  completeCurrentChallenge: (planId, notes) => {
     const { plans } = get();
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
@@ -122,6 +122,7 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
             ...c,
             completed: true,
             completedAt: new Date().toISOString(),
+            notes: notes?.trim() || undefined,
           };
         }
         return c;
@@ -258,4 +259,44 @@ export function selectStats(plans: GoalPlan[]) {
     totalChallenges,
     activePlans: plans.filter((p) => p.isActive).length,
   };
+}
+
+/** A completed challenge entry with its parent goal for display. */
+export interface CompletedEntry {
+  challengeId: string;
+  title: string;
+  description: string;
+  notes?: string;
+  completedAt: string;
+  goalName: string;
+}
+
+/**
+ * Build a chronological journal of completed challenges across all plans.
+ * Most recent first.
+ */
+export function selectCompletedHistory(plans: GoalPlan[]): CompletedEntry[] {
+  const entries: CompletedEntry[] = [];
+
+  for (const plan of plans) {
+    for (const c of plan.challenges) {
+      if (c.completed && c.completedAt) {
+        entries.push({
+          challengeId: c.id,
+          title: c.title,
+          description: c.description,
+          notes: c.notes,
+          completedAt: c.completedAt,
+          goalName: plan.goal,
+        });
+      }
+    }
+  }
+
+  entries.sort(
+    (a, b) =>
+      new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+  );
+
+  return entries;
 }

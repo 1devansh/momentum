@@ -1,28 +1,43 @@
 /**
  * Progress Screen (Character Growth)
  *
- * Shows character evolution based on total completed challenges.
- * Uses the deterministic character engine — no regression.
+ * Shows character evolution and stats.
+ * "Challenges Done" and "Goal Plans" are tappable to expand
+ * into detail views (journal / plan list) inline.
  */
 
+import { format } from "date-fns";
 import { Href, router } from "expo-router";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Button, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
-import { selectStats, useGoalPlanStore } from "../../src/features/challenges";
+import type { CompletedEntry, GoalPlan } from "../../src/features/challenges";
 import {
-    CHARACTER_STAGES,
-    computeCharacterState,
+  selectCompletedHistory,
+  selectStats,
+  useGoalPlanStore,
+} from "../../src/features/challenges";
+import {
+  CHARACTER_STAGES,
+  computeCharacterState,
 } from "../../src/features/character";
 import { useSubscription } from "../../src/state";
+
+type DetailView = null | "challenges" | "goals";
 
 export default function ProgressScreen() {
   const { isPro } = useSubscription();
   const plans = useGoalPlanStore((s) => s.plans);
+  const [detailView, setDetailView] = useState<DetailView>(null);
 
   const stats = selectStats(plans);
   const character = computeCharacterState(stats.totalCompleted);
+  const history = selectCompletedHistory(plans);
+
+  const toggleDetail = (view: DetailView) => {
+    setDetailView((prev) => (prev === view ? null : view));
+  };
 
   return (
     <ScreenContainer scrollable>
@@ -90,29 +105,72 @@ export default function ProgressScreen() {
         </View>
       </View>
 
-      {/* Stats */}
+      {/* Tappable Stats */}
       <View style={styles.statsSection}>
         <Text style={styles.sectionTitle}>Statistics</Text>
         <View style={styles.statsGrid}>
-          <StatCard
-            label="Challenges Done"
-            value={String(stats.totalCompleted)}
-          />
-          <StatCard
-            label="Total Challenges"
-            value={String(stats.totalChallenges)}
-          />
-          <StatCard label="Goal Plans" value={String(plans.length)} />
-          <StatCard
-            label="Completion Rate"
-            value={
-              stats.totalChallenges > 0
-                ? `${Math.round((stats.totalCompleted / stats.totalChallenges) * 100)}%`
-                : "—"
-            }
-          />
+          <TouchableOpacity
+            style={[
+              styles.statCard,
+              detailView === "challenges" && styles.statCardActive,
+            ]}
+            onPress={() => toggleDetail("challenges")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.statValue}>{stats.totalCompleted}</Text>
+            <Text style={styles.statLabel}>Challenges Done</Text>
+            {stats.totalCompleted > 0 && (
+              <Text style={styles.statTapHint}>
+                {detailView === "challenges" ? "▲ Hide" : "▼ View"}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.statCard,
+              detailView === "goals" && styles.statCardActive,
+            ]}
+            onPress={() => toggleDetail("goals")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.statValue}>{plans.length}</Text>
+            <Text style={styles.statLabel}>Goal Plans</Text>
+            {plans.length > 0 && (
+              <Text style={styles.statTapHint}>
+                {detailView === "goals" ? "▲ Hide" : "▼ View"}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Expanded Detail: Challenge Journal */}
+      {detailView === "challenges" && history.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text style={styles.detailTitle}>Challenge Journal</Text>
+          {history.map((entry) => (
+            <JournalEntry key={entry.challengeId} entry={entry} />
+          ))}
+        </View>
+      )}
+      {detailView === "challenges" && history.length === 0 && (
+        <View style={styles.detailEmpty}>
+          <Text style={styles.detailEmptyText}>
+            No challenges completed yet. Get started!
+          </Text>
+        </View>
+      )}
+
+      {/* Expanded Detail: Goal Plans */}
+      {detailView === "goals" && plans.length > 0 && (
+        <View style={styles.detailSection}>
+          <Text style={styles.detailTitle}>Your Goals</Text>
+          {plans.map((plan) => (
+            <GoalCard key={plan.id} plan={plan} />
+          ))}
+        </View>
+      )}
 
       {/* Upgrade CTA */}
       {!isPro && (
@@ -132,17 +190,53 @@ export default function ProgressScreen() {
   );
 }
 
-interface StatCardProps {
-  label: string;
-  value: string;
-}
+const JournalEntry: React.FC<{ entry: CompletedEntry }> = ({ entry }) => {
+  const dateStr = format(new Date(entry.completedAt), "MMM d, yyyy");
+  return (
+    <View style={styles.journalCard}>
+      <View style={styles.journalHeader}>
+        <Text style={styles.journalDate}>{dateStr}</Text>
+        <Text style={styles.journalGoal} numberOfLines={1}>
+          {entry.goalName}
+        </Text>
+      </View>
+      <Text style={styles.journalTitle}>{entry.title}</Text>
+      {entry.notes && (
+        <View style={styles.journalNotes}>
+          <Text style={styles.journalNotesLabel}>Your thoughts</Text>
+          <Text style={styles.journalNotesText}>{entry.notes}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
-const StatCard: React.FC<StatCardProps> = ({ label, value }) => (
-  <View style={styles.statCard}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
+const GoalCard: React.FC<{ plan: GoalPlan }> = ({ plan }) => {
+  const done = plan.challenges.filter((c) => c.completed).length;
+  const total = plan.challenges.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const isComplete = plan.currentIndex >= total;
+
+  return (
+    <View style={styles.goalCard}>
+      <View style={styles.goalCardHeader}>
+        <Text style={styles.goalCardTitle} numberOfLines={2}>
+          {plan.goal}
+        </Text>
+        {isComplete && <Text style={styles.goalCardBadge}>✓ Done</Text>}
+      </View>
+      <View style={styles.goalCardBar}>
+        <View style={[styles.goalCardBarFill, { width: `${pct}%` }]} />
+      </View>
+      <Text style={styles.goalCardProgress}>
+        {done} of {total} challenges completed
+      </Text>
+      <Text style={styles.goalCardDate}>
+        Started {format(new Date(plan.createdAt), "MMM d, yyyy")}
+      </Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   header: { marginTop: 16, marginBottom: 24 },
@@ -216,18 +310,123 @@ const styles = StyleSheet.create({
   checkmark: { fontSize: 16, color: COLORS.primary, fontWeight: "bold" },
   lockIcon: { fontSize: 14 },
   locked: { opacity: 0.4 },
-  statsSection: { marginBottom: 32 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  statsSection: { marginBottom: 16 },
+  statsGrid: { flexDirection: "row", gap: 12 },
   statCard: {
     flex: 1,
-    minWidth: "45%",
     backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
   },
-  statValue: { fontSize: 24, fontWeight: "bold", color: COLORS.text },
+  statCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + "10",
+  },
+  statValue: { fontSize: 28, fontWeight: "bold", color: COLORS.text },
   statLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
+  statTapHint: {
+    fontSize: 11,
+    color: COLORS.primary,
+    marginTop: 6,
+  },
+  detailSection: { marginBottom: 32 },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  detailEmpty: {
+    alignItems: "center",
+    padding: 24,
+    marginBottom: 16,
+  },
+  detailEmptyText: { fontSize: 14, color: COLORS.textSecondary },
+  journalCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+  },
+  journalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  journalDate: { fontSize: 12, fontWeight: "600", color: COLORS.primary },
+  journalGoal: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    maxWidth: "50%",
+  },
+  journalTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  journalNotes: {
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+  },
+  journalNotesLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  journalNotesText: {
+    fontSize: 13,
+    color: COLORS.text,
+    lineHeight: 18,
+    fontStyle: "italic",
+  },
+  goalCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+  },
+  goalCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  goalCardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  goalCardBadge: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  goalCardBar: {
+    height: 4,
+    backgroundColor: COLORS.background,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
+  goalCardBarFill: {
+    height: "100%",
+    backgroundColor: COLORS.primary,
+    borderRadius: 2,
+  },
+  goalCardProgress: { fontSize: 12, color: COLORS.textSecondary },
+  goalCardDate: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
   upgradeSection: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,

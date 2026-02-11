@@ -2,13 +2,19 @@
  * Home Screen (Daily Challenge)
  *
  * Shows the user's current challenge from their active goal plan.
- * Enforces one-challenge-per-day: once completed, shows celebration
- * until the next calendar day.
+ * Enforces one-challenge-per-day. Allows notes on completion.
+ * Pro users can switch between multiple goal plans.
  */
 
 import { Href, router } from "expo-router";
-import React, { useRef } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useRef, useState } from "react";
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { Button, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
@@ -25,14 +31,13 @@ import { useSubscription } from "../../src/state";
 export default function HomeScreen() {
   const { isPro, isLoading } = useSubscription();
 
-  // Subscribe to reactive state — these cause re-renders when plans change
   const plans = useGoalPlanStore((s) => s.plans);
   const activePlanId = useGoalPlanStore((s) => s.activePlanId);
   const completeCurrentChallenge = useGoalPlanStore(
     (s) => s.completeCurrentChallenge,
   );
+  const setActivePlan = useGoalPlanStore((s) => s.setActivePlan);
 
-  // Derived from plans (reactive)
   const activePlan = plans.find((p) => p.id === activePlanId);
   const currentChallenge = selectCurrentChallenge(plans, activePlanId);
   const completedToday = selectCompletedToday(plans, activePlanId);
@@ -40,8 +45,9 @@ export default function HomeScreen() {
   const character = computeCharacterState(stats.totalCompleted);
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
+  const [notes, setNotes] = useState("");
+  const [showPlanSwitcher, setShowPlanSwitcher] = useState(false);
 
-  // The challenge that was just completed (for showing encouragement)
   const lastCompletedChallenge = activePlan
     ? (activePlan.challenges
         .filter((c) => c.completed)
@@ -54,7 +60,8 @@ export default function HomeScreen() {
 
   const handleComplete = () => {
     if (!activePlanId || completedToday) return;
-    completeCurrentChallenge(activePlanId);
+    completeCurrentChallenge(activePlanId, notes);
+    setNotes("");
     confettiRef.current?.start();
   };
 
@@ -68,6 +75,11 @@ export default function HomeScreen() {
 
   const handleUpgrade = () => {
     router.push("/paywall" as Href);
+  };
+
+  const handleSwitchPlan = (planId: string) => {
+    setActivePlan(planId);
+    setShowPlanSwitcher(false);
   };
 
   const planCompleted =
@@ -95,10 +107,25 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Active Goal */}
+      {/* Active Goal + Plan Switcher */}
       {activePlan && (
-        <View style={styles.goalBanner}>
-          <Text style={styles.goalLabel}>YOUR GOAL</Text>
+        <TouchableOpacity
+          style={styles.goalBanner}
+          onPress={() =>
+            (plans.length > 1 || isPro) &&
+            setShowPlanSwitcher(!showPlanSwitcher)
+          }
+          activeOpacity={plans.length > 1 || isPro ? 0.7 : 1}
+        >
+          <View style={styles.goalHeader}>
+            <Text style={styles.goalLabel}>YOUR GOAL</Text>
+            {(plans.length > 1 || isPro) && (
+              <Text style={styles.switchHint}>
+                {showPlanSwitcher ? "▲" : "▼"}{" "}
+                {plans.length > 1 ? "Switch" : "Goals"}
+              </Text>
+            )}
+          </View>
           <Text style={styles.goalText}>{activePlan.goal}</Text>
           <View style={styles.goalProgressBar}>
             <View
@@ -115,6 +142,53 @@ export default function HomeScreen() {
               ? "Just getting started"
               : `${activePlan.challenges.filter((c) => c.completed).length} challenge${activePlan.challenges.filter((c) => c.completed).length === 1 ? "" : "s"} completed`}
           </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Plan Switcher Dropdown */}
+      {showPlanSwitcher && (
+        <View style={styles.planSwitcher}>
+          {plans
+            .filter((p) => p.id !== activePlanId)
+            .map((plan) => {
+              const done = plan.challenges.filter((c) => c.completed).length;
+              return (
+                <TouchableOpacity
+                  key={plan.id}
+                  style={styles.planOption}
+                  onPress={() => handleSwitchPlan(plan.id)}
+                >
+                  <Text style={styles.planOptionGoal} numberOfLines={1}>
+                    {plan.goal}
+                  </Text>
+                  <Text style={styles.planOptionProgress}>{done} done</Text>
+                </TouchableOpacity>
+              );
+            })}
+          {canCreateGoalPlan(isPro, plans.length) && (
+            <TouchableOpacity
+              style={styles.planOptionNew}
+              onPress={() => {
+                setShowPlanSwitcher(false);
+                handleNewGoal();
+              }}
+            >
+              <Text style={styles.planOptionNewText}>+ Add new goal</Text>
+            </TouchableOpacity>
+          )}
+          {!canCreateGoalPlan(isPro, plans.length) && (
+            <TouchableOpacity
+              style={styles.planOptionNew}
+              onPress={() => {
+                setShowPlanSwitcher(false);
+                handleUpgrade();
+              }}
+            >
+              <Text style={styles.planOptionUpgrade}>
+                🔒 Upgrade to add more goals
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -123,7 +197,6 @@ export default function HomeScreen() {
         <Text style={styles.challengeLabel}>TODAY&apos;S CHALLENGE</Text>
 
         {completedToday ? (
-          /* Already done for today — show celebration until tomorrow */
           <View style={styles.celebrationContent}>
             <Text style={styles.celebrationEmoji}>🎉</Text>
             <Text style={styles.celebrationTitle}>Done for today!</Text>
@@ -131,17 +204,38 @@ export default function HomeScreen() {
               {lastCompletedChallenge?.encouragement ??
                 "You showed up. That\u2019s what matters."}
             </Text>
+            {lastCompletedChallenge?.notes && (
+              <View style={styles.notesReview}>
+                <Text style={styles.notesReviewLabel}>Your thoughts:</Text>
+                <Text style={styles.notesReviewText}>
+                  {lastCompletedChallenge.notes}
+                </Text>
+              </View>
+            )}
             <Text style={styles.comeBackText}>
               Come back tomorrow for your next challenge.
             </Text>
           </View>
         ) : currentChallenge ? (
-          /* Show today's challenge */
           <View>
             <Text style={styles.challengeTitle}>{currentChallenge.title}</Text>
             <Text style={styles.challengeDescription}>
               {currentChallenge.description}
             </Text>
+
+            {/* Notes input */}
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Any thoughts or reflections? (optional)"
+              placeholderTextColor={COLORS.textSecondary}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              accessibilityLabel="Challenge notes"
+            />
+
             <Button
               title="I did it ✓"
               onPress={handleComplete}
@@ -150,7 +244,6 @@ export default function HomeScreen() {
             />
           </View>
         ) : planCompleted ? (
-          /* All challenges in the plan are done */
           <View style={styles.placeholder}>
             <Text style={styles.placeholderEmoji}>🏆</Text>
             <Text style={styles.placeholderTitle}>Plan Complete!</Text>
@@ -165,7 +258,6 @@ export default function HomeScreen() {
             />
           </View>
         ) : (
-          /* No plan at all */
           <View style={styles.placeholder}>
             <Text style={styles.placeholderEmoji}>🎯</Text>
             <Text style={styles.placeholderTitle}>No active plan</Text>
@@ -265,17 +357,23 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + "12",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 8,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
+  },
+  goalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
   },
   goalLabel: {
     fontSize: 11,
     fontWeight: "700",
     color: COLORS.primary,
     letterSpacing: 1,
-    marginBottom: 4,
   },
+  switchHint: { fontSize: 12, color: COLORS.primary },
   goalText: {
     fontSize: 16,
     fontWeight: "600",
@@ -297,11 +395,43 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     minWidth: 2,
   },
+  planSwitcher: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  planOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.background,
+  },
+  planOptionGoal: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    marginRight: 8,
+  },
+  planOptionProgress: { fontSize: 12, color: COLORS.textSecondary },
+  planOptionNew: { padding: 14 },
+  planOptionNewText: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  planOptionUpgrade: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
   challengeCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
+    marginTop: 12,
   },
   challengeLabel: {
     fontSize: 12,
@@ -320,7 +450,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textSecondary,
     lineHeight: 24,
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  notesInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: COLORS.text,
+    minHeight: 60,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   completeBtn: { width: "100%" },
   placeholder: { alignItems: "center", paddingVertical: 16 },
@@ -354,6 +494,19 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 12,
   },
+  notesReview: {
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    width: "100%",
+  },
+  notesReviewLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  notesReviewText: { fontSize: 14, color: COLORS.text, lineHeight: 20 },
   comeBackText: {
     fontSize: 13,
     color: COLORS.textSecondary,
