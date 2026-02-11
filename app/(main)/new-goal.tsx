@@ -12,6 +12,7 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -64,41 +65,52 @@ export default function NewGoalScreen() {
     <ScreenContainer style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
 
-        <View style={styles.content}>
-          <Text style={styles.emoji}>🎯</Text>
-          <Text style={styles.title}>What's your next goal?</Text>
-          <Text style={styles.sub}>
-            We'll create a personalized challenge plan to help you get there.
-          </Text>
+          <View style={styles.content}>
+            <Text style={styles.emoji}>🎯</Text>
+            <Text style={styles.title}>What's your next goal?</Text>
+            <Text style={styles.sub}>
+              We'll create a personalized challenge plan to help you get there.
+            </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Read more books, save money, learn guitar..."
-            placeholderTextColor={COLORS.textSecondary}
-            value={goal}
-            onChangeText={setGoal}
-            multiline
-            maxLength={200}
-            textAlignVertical="top"
-            accessibilityLabel="Your new goal"
-          />
-        </View>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Read more books, save money, learn guitar..."
+              placeholderTextColor={COLORS.textSecondary}
+              value={goal}
+              onChangeText={setGoal}
+              multiline
+              maxLength={200}
+              textAlignVertical="top"
+              accessibilityLabel="Your new goal"
+            />
+          </View>
 
-        <View style={styles.footer}>
-          <Button
-            title="Generate my plan"
-            onPress={handleCreate}
-            size="large"
-            disabled={!canSubmit}
-            style={styles.cta}
-          />
-        </View>
+          <View style={styles.footer}>
+            <Button
+              title="Generate my plan"
+              onPress={handleCreate}
+              size="large"
+              disabled={!canSubmit}
+              style={styles.cta}
+            />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
@@ -107,9 +119,10 @@ export default function NewGoalScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: COLORS.background },
   flex: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: "space-between" },
   backBtn: { paddingVertical: 12 },
   backText: { fontSize: 16, color: COLORS.primary },
-  content: { flex: 1, justifyContent: "center", alignItems: "center" },
+  content: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   emoji: { fontSize: 56, marginBottom: 20 },
   title: {
     fontSize: 24,

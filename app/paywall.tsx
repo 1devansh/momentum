@@ -52,7 +52,18 @@ export default function PaywallScreen() {
       Alert.alert(
         "Already Subscribed",
         "You already have an active subscription!",
-        [{ text: "OK", onPress: () => router.back() }],
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(main)/home");
+              }
+            },
+          },
+        ],
       );
     }
   }, [isPro]);
@@ -71,7 +82,18 @@ export default function PaywallScreen() {
       Alert.alert(
         "Welcome to Pro! 🎉",
         "Thank you for subscribing. Enjoy all premium features!",
-        [{ text: "Continue", onPress: () => router.back() }],
+        [
+          {
+            text: "Continue",
+            onPress: () => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(main)/home");
+              }
+            },
+          },
+        ],
       );
     }
   };
@@ -80,7 +102,16 @@ export default function PaywallScreen() {
     const restored = await restore();
     if (restored) {
       Alert.alert("Restored!", "Your subscription has been restored.", [
-        { text: "Continue", onPress: () => router.back() },
+        {
+          text: "Continue",
+          onPress: () => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(main)/home");
+            }
+          },
+        },
       ]);
     } else {
       Alert.alert(
@@ -91,7 +122,11 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(main)/home");
+    }
   };
 
   return (

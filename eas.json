@@ -9,7 +9,9 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "YOUR_DEV_KEY",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_DEV_KEY"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_DEV_KEY",
+        "EXPO_PUBLIC_GEMINI_API_KEY": "YOUR_GEMINI_KEY",
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-2.0-flash"
       }
     },
     "preview": {
@@ -19,7 +21,9 @@
       },
       "env": {
         "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "YOUR_PREVIEW_KEY",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_PREVIEW_KEY"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_PREVIEW_KEY",
+        "EXPO_PUBLIC_GEMINI_API_KEY": "YOUR_GEMINI_KEY",
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-2.0-flash"
       }
     },
     "production": {
@@ -29,7 +33,9 @@
       },
       "env": {
         "EXPO_PUBLIC_REVENUECAT_ANDROID_KEY": "YOUR_PROD_KEY",
-        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_PROD_KEY"
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "YOUR_PROD_KEY",
+        "EXPO_PUBLIC_GEMINI_API_KEY": "YOUR_GEMINI_KEY",
+        "EXPO_PUBLIC_GEMINI_MODEL": "gemini-2.0-flash"
       }
     }
   },

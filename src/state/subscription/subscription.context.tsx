@@ -7,25 +7,25 @@
 
 import Constants from "expo-constants";
 import React, {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 import {
-  CustomerInfo,
-  PurchasesOffering,
-  PurchasesPackage,
+    CustomerInfo,
+    PurchasesOffering,
+    PurchasesPackage,
 } from "react-native-purchases";
 import {
-  addCustomerInfoUpdateListener,
-  checkProEntitlement,
-  getCustomerInfo,
-  getOfferings,
-  purchasePackage,
-  restorePurchases,
+    addCustomerInfoUpdateListener,
+    checkProEntitlement,
+    getCustomerInfo,
+    getOfferings,
+    purchasePackage,
+    restorePurchases,
 } from "../../services/purchases";
 
 // Types
@@ -163,8 +163,46 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
 
         return isPro;
       } catch (error: any) {
+        console.log(
+          "[SubscriptionContext] Purchase error caught. code:",
+          error.code,
+          "message:",
+          error.message,
+          "userCancelled:",
+          error.userCancelled,
+        );
+        // Handle ITEM_ALREADY_OWNED — user has an active subscription
+        // but the purchase flow threw instead of returning customerInfo.
+        // Refresh entitlements so the app reflects the real state.
+        // RevenueCat error code "6" = PRODUCT_ALREADY_PURCHASED_ERROR
+        if (error.code === "6") {
+          console.log(
+            "[SubscriptionContext] Product already owned — refreshing entitlements...",
+          );
+          try {
+            const customerInfo = await restorePurchases();
+            const isPro = await checkProEntitlement();
+            console.log(
+              "[SubscriptionContext] Restored after already-owned. Is Pro:",
+              isPro,
+            );
+            updateState({
+              isPro,
+              customerInfo,
+              isLoading: false,
+              error: null,
+            });
+            return isPro;
+          } catch (restoreError) {
+            console.error(
+              "[SubscriptionContext] Restore after already-owned failed:",
+              restoreError,
+            );
+          }
+        }
+
         const errorMessage =
-          error.message === "PURCHASE_CANCELLED"
+          error.userCancelled || error.message === "PURCHASE_CANCELLED"
             ? "Purchase cancelled"
             : "Purchase failed. Please try again.";
 

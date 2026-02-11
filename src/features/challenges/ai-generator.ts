@@ -1,10 +1,9 @@
 /**
  * AI Challenge Generator
  *
- * Generates personalized micro-challenges using AI.
+ * Generates personalized micro-challenges using Gemini AI.
  * Falls back to static challenges on failure.
  *
- * TODO: Replace mock AI with real API call (OpenAI, Anthropic, etc.)
  * TODO: Add rate limiting and caching
  * TODO: Support creator-led challenge templates
  */
@@ -89,36 +88,89 @@ function toChallenges(
 }
 
 /**
- * Generate challenges using AI.
- *
- * TODO: Replace this mock implementation with a real API call.
- * The mock simulates what a real AI response would look like
- * so the rest of the system is ready for production.
+ * Generate challenges using Gemini AI (gemini-2.0-flash).
+ * Falls back gracefully if API key is missing or call fails.
  */
-async function callAI(prompt: string): Promise<string | null> {
-  try {
-    // TODO: Implement real AI API call
-    // Example with OpenAI:
-    // const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${API_KEY}`,
-    //   },
-    //   body: JSON.stringify({
-    //     model: 'gpt-4o-mini',
-    //     messages: [{ role: 'user', content: prompt }],
-    //     temperature: 0.7,
-    //   }),
-    // });
-    // const data = await response.json();
-    // return data.choices[0].message.content;
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-preview-05-20";
 
-    // For now, return null to trigger fallback
-    console.log("[AIGenerator] AI not configured, using fallback challenges");
+function getGeminiConfig() {
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
+  const model = process.env.EXPO_PUBLIC_GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  return { apiKey, model };
+}
+
+async function callAI(prompt: string): Promise<string | null> {
+  const { apiKey, model } = getGeminiConfig();
+
+  if (!apiKey || apiKey === "your_gemini_api_key_here") {
+    console.log(
+      "[AIGenerator] Gemini API key not configured, using fallback challenges",
+    );
     return null;
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      responseMimeType: "application/json",
+    },
+  };
+
+  console.log("[AIGenerator] ➡️ Request:", {
+    model,
+    url: url.replace(apiKey, "***"),
+    promptLength: prompt.length,
+    promptPreview: prompt.slice(0, 120) + "...",
+  });
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("[AIGenerator] ❌ Response:", {
+        status: response.status,
+        elapsed: `${elapsed}ms`,
+        error: errorBody,
+      });
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+    const usage = data.usageMetadata;
+
+    console.log("[AIGenerator] ✅ Response:", {
+      status: response.status,
+      elapsed: `${elapsed}ms`,
+      responseLength: text?.length ?? 0,
+      responsePreview: text?.slice(0, 120) + "...",
+      tokens: usage
+        ? {
+            prompt: usage.promptTokenCount,
+            response: usage.candidatesTokenCount,
+            total: usage.totalTokenCount,
+          }
+        : "N/A",
+    });
+
+    return text;
   } catch (error) {
-    console.error("[AIGenerator] AI call failed:", error);
+    const elapsed = Date.now() - startTime;
+    console.error("[AIGenerator] ❌ Failed:", {
+      elapsed: `${elapsed}ms`,
+      error,
+    });
     return null;
   }
 }
