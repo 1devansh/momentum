@@ -21,4 +21,4 @@ export * from "./components";
 export * from "./hooks";
 
 // Features (domain-specific)
-// export * from './features';
+export * from "./features";

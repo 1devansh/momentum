@@ -1,11 +1,8 @@
 /**
- * Screen 4: Optional Goal Input
+ * Screen 4: Goal Input (REQUIRED)
  *
- * Users can type a personal goal or skip.
- * Input is stored for future AI-powered personalization.
- *
- * TODO: Feed this goal into AI challenge generation engine
- * TODO: Show goal on profile / progress screens
+ * Users MUST enter a primary goal. This goal drives their
+ * personalized AI challenge plan.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,10 +11,10 @@ import React, { useState } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { Button, ScreenContainer } from "../../src/components";
@@ -27,14 +24,11 @@ import { STORAGE_KEYS } from "../../src/config/constants";
 export default function GoalScreen() {
   const [goal, setGoal] = useState("");
 
-  const handleContinue = async () => {
-    if (goal.trim()) {
-      await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_GOAL, goal.trim());
-    }
-    router.push("/(onboarding)/character" as Href);
-  };
+  const canContinue = goal.trim().length >= 5;
 
-  const handleSkip = () => {
+  const handleContinue = async () => {
+    if (!canContinue) return;
+    await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_GOAL, goal.trim());
     router.push("/(onboarding)/character" as Href);
   };
 
@@ -42,41 +36,56 @@ export default function GoalScreen() {
     <ScreenContainer style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
-        <View style={styles.content}>
-          <Text style={styles.emoji}>🎯</Text>
-          <Text style={styles.title}>
-            What's one thing you'd love to be braver about?
-          </Text>
-          <Text style={styles.sub}>
-            This helps us tailor your experience. Totally optional.
-          </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Text style={styles.emoji}>🎯</Text>
+            <Text style={styles.title}>
+              What is one goal you've{"\n"}been putting off?
+            </Text>
+            <Text style={styles.sub}>
+              This powers your personalized challenge plan.{"\n"}Be honest — no
+              one else sees this.
+            </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Speaking up in meetings, starting a side project..."
-            placeholderTextColor={COLORS.textSecondary}
-            value={goal}
-            onChangeText={setGoal}
-            multiline
-            maxLength={200}
-            textAlignVertical="top"
-            accessibilityLabel="Your personal goal"
-          />
-        </View>
+            <TextInput
+              style={[
+                styles.input,
+                !canContinue && goal.length > 0 && styles.inputHint,
+              ]}
+              placeholder="e.g. Start exercising regularly, launch my side project, learn to cook..."
+              placeholderTextColor={COLORS.textSecondary}
+              value={goal}
+              onChangeText={setGoal}
+              multiline
+              maxLength={200}
+              textAlignVertical="top"
+              accessibilityLabel="Your primary goal"
+            />
+            {goal.length > 0 && !canContinue && (
+              <Text style={styles.hint}>
+                Tell us a bit more (at least 5 characters)
+              </Text>
+            )}
+          </View>
 
-        <View style={styles.footer}>
-          <Button
-            title={goal.trim() ? "Continue" : "Continue"}
-            onPress={handleContinue}
-            size="large"
-            style={styles.cta}
-          />
-          <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-            <Text style={styles.skipText}>Skip for now</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.footer}>
+            <Button
+              title="Continue"
+              onPress={handleContinue}
+              size="large"
+              disabled={!canContinue}
+              style={styles.cta}
+            />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
@@ -85,7 +94,8 @@ export default function GoalScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: COLORS.background },
   flex: { flex: 1 },
-  content: { flex: 1, justifyContent: "center", alignItems: "center" },
+  scrollContent: { flexGrow: 1, justifyContent: "space-between" },
+  content: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   emoji: { fontSize: 56, marginBottom: 20 },
   title: {
     fontSize: 24,
@@ -100,6 +110,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 28,
+    lineHeight: 22,
   },
   input: {
     width: "100%",
@@ -111,8 +122,15 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: 22,
   },
+  inputHint: {
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+  },
+  hint: {
+    fontSize: 13,
+    color: COLORS.warning,
+    marginTop: 8,
+  },
   footer: { paddingBottom: 16, alignItems: "center" },
   cta: { width: "100%" },
-  skipBtn: { marginTop: 14, padding: 8 },
-  skipText: { fontSize: 15, color: COLORS.textSecondary },
 });

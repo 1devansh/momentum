@@ -7,19 +7,20 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from "react";
 import { STORAGE_KEYS } from "../../config/constants";
+import { useGoalPlanStore } from "../../features/challenges";
 import {
-  clearUserProfile,
-  getOrCreateUserProfile,
-  getUserProfile,
-  UserProfile,
+    clearUserProfile,
+    getOrCreateUserProfile,
+    getUserProfile,
+    UserProfile,
 } from "../../services/auth";
 import { syncUserAttributesToRevenueCat } from "../../services/purchases";
 
@@ -261,6 +262,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         AsyncStorage.removeItem(STORAGE_KEYS.HAS_ONBOARDED),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES),
         AsyncStorage.removeItem(STORAGE_KEYS.EXTENDED_USER_PROFILE),
+        AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_GOAL),
+        AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_FOCUS_AREAS),
+        useGoalPlanStore.getState().reset(),
       ]);
       updateState({
         hasOnboarded: false,

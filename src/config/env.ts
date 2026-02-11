@@ -85,4 +85,6 @@ export const getRevenueCatApiKey = (): string => {
 export const FEATURE_FLAGS = {
   enableDebugScreen:
     process.env.EXPO_PUBLIC_ENABLE_DEBUG_SCREEN === "true" || __DEV__,
+  DAILY_CHALLENGES: true,
+  CHARACTER_GROWTH: true,
 };

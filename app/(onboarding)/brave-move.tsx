@@ -1,13 +1,8 @@
 /**
  * Screen 7: Today's Brave Move
  *
- * Immediate transition to the first daily challenge.
- * Shows a placeholder challenge with completion button.
- * Triggers confetti + positive affirmation on completion.
- *
- * TODO: Replace placeholder with AI-generated challenge based on focus areas
- * TODO: Gate premium challenge categories behind subscription
- * TODO: Track completion in challenge history / streak system
+ * First challenge experience right after onboarding.
+ * Uses the actual challenge from the generated plan.
  */
 
 import { Href, router } from "expo-router";
@@ -16,18 +11,13 @@ import { StyleSheet, Text, View } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { Button, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
-
-const PLACEHOLDER_CHALLENGE = {
-  title: "Send a kind message",
-  description:
-    "Think of someone you appreciate. Send them a short message telling them why. It doesn't have to be perfect — just honest.",
-  category: "Connection",
-  duration: "~2 min",
-};
+import {
+    selectCurrentChallenge,
+    useGoalPlanStore,
+} from "../../src/features/challenges";
 
 const AFFIRMATIONS = [
-  "You showed up. That's what matters.",
-  "Bravery isn't the absence of fear — it's action despite it.",
+  "You showed up. That&apos;s what matters.",
   "One small step today, a giant leap over time.",
   "You just proved you can do hard things.",
   "The hardest part is starting. You did it.",
@@ -40,12 +30,20 @@ export default function BraveMoveScreen() {
     () => AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)],
   );
 
+  const plans = useGoalPlanStore((s) => s.plans);
+  const activePlanId = useGoalPlanStore((s) => s.activePlanId);
+  const completeCurrentChallenge = useGoalPlanStore(
+    (s) => s.completeCurrentChallenge,
+  );
+
+  const challenge = selectCurrentChallenge(plans, activePlanId);
+
   const handleComplete = () => {
+    if (activePlanId) {
+      completeCurrentChallenge(activePlanId);
+    }
     setCompleted(true);
     confettiRef.current?.start();
-    // TODO: Record challenge completion in persistent storage
-    // TODO: Update streak counter
-    // TODO: Award XP / character growth points
   };
 
   const handleGoHome = () => {
@@ -57,21 +55,14 @@ export default function BraveMoveScreen() {
       <View style={styles.content}>
         {!completed ? (
           <>
-            <Text style={styles.label}>TODAY'S BRAVE MOVE</Text>
+            <Text style={styles.label}>YOUR FIRST BRAVE MOVE</Text>
             <View style={styles.card}>
-              <View style={styles.meta}>
-                <Text style={styles.category}>
-                  {PLACEHOLDER_CHALLENGE.category}
-                </Text>
-                <Text style={styles.duration}>
-                  {PLACEHOLDER_CHALLENGE.duration}
-                </Text>
-              </View>
               <Text style={styles.challengeTitle}>
-                {PLACEHOLDER_CHALLENGE.title}
+                {challenge?.title ?? "Take the first step"}
               </Text>
               <Text style={styles.challengeDesc}>
-                {PLACEHOLDER_CHALLENGE.description}
+                {challenge?.description ??
+                  "Open your goal plan and read through your first challenge. Then do it."}
               </Text>
             </View>
           </>
@@ -79,7 +70,9 @@ export default function BraveMoveScreen() {
           <View style={styles.celebrationContent}>
             <Text style={styles.celebrationEmoji}>🎉</Text>
             <Text style={styles.celebrationTitle}>You did it!</Text>
-            <Text style={styles.affirmation}>{affirmation}</Text>
+            <Text style={styles.affirmation}>
+              {challenge?.encouragement ?? affirmation}
+            </Text>
           </View>
         )}
       </View>
@@ -129,20 +122,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 24,
-  },
-  meta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  category: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  duration: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
   },
   challengeTitle: {
     fontSize: 22,

@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { useGoalPlanStore } from "../src/features/challenges";
 import { initializePurchases } from "../src/services";
 import { SubscriptionProvider, UserProvider } from "../src/state";
 
@@ -31,10 +32,8 @@ export default function RootLayout() {
         // Initialize RevenueCat
         await initializePurchases();
 
-        // TODO: Add any other initialization logic here
-        // - Load fonts
-        // - Load cached data
-        // - Check authentication status
+        // Hydrate goal plan store from local storage
+        await useGoalPlanStore.getState().hydrate();
       } catch (error) {
         console.error("App initialization error:", error);
         // TODO: Handle initialization errors gracefully

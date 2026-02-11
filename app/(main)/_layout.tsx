@@ -80,6 +80,12 @@ export default function MainLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="new-goal"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
