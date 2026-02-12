@@ -12,7 +12,7 @@
  */
 
 import { Href, router } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Animated,
   StyleSheet,
@@ -22,7 +22,12 @@ import {
   View,
 } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
-import { Button, GoalCarousel, ScreenContainer } from "../../src/components";
+import {
+  Button,
+  EvolutionCelebration,
+  GoalCarousel,
+  ScreenContainer,
+} from "../../src/components";
 import { COLORS } from "../../src/config";
 import {
   GoalPlan,
@@ -33,7 +38,12 @@ import {
   selectStats,
   useGoalPlanStore,
 } from "../../src/features/challenges";
-import { computeCharacterState } from "../../src/features/character";
+import {
+  computeCharacterState,
+  getReturnMessage,
+  getStageMessage,
+  useEvolutionStore,
+} from "../../src/features/character";
 import {
   getDebugDate,
   useDebugDateStore,
@@ -85,6 +95,12 @@ export default function HomeScreen() {
 
   const stats = selectStats(plans);
   const character = computeCharacterState(stats.totalCompleted);
+  const stageMessage = useMemo(
+    () => getStageMessage(character.stageIndex),
+    [character.stageIndex],
+  );
+  const checkEvolution = useEvolutionStore((s) => s.checkEvolution);
+
   const retroRequired = selectRetroRequired(activePlan);
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
@@ -109,11 +125,28 @@ export default function HomeScreen() {
         )[0] ?? null)
     : null;
 
+  const returnMessage = useMemo(() => {
+    if (!lastCompletedChallenge?.completedAt) return null;
+    const now = getDebugDate();
+    const completedAt = new Date(lastCompletedChallenge.completedAt);
+    const diffMs = now.getTime() - completedAt.getTime();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    if (diffMs > oneDayMs) {
+      return getReturnMessage(character.stageIndex);
+    }
+    return null;
+  }, [lastCompletedChallenge?.completedAt, character.stageIndex, dayOffset]);
+
   const handleComplete = () => {
     if (!activePlanId || completedToday) return;
     completeCurrentChallenge(activePlanId, notes);
     setNotes("");
     confettiRef.current?.start();
+
+    // After completion, get fresh state and check for evolution
+    const updatedStats = selectStats(useGoalPlanStore.getState().plans);
+    const newCharacter = computeCharacterState(updatedStats.totalCompleted);
+    checkEvolution(newCharacter.stageIndex);
   };
 
   const handleProgramComplete = () => {
@@ -183,8 +216,9 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>
-            {character.stage.emoji} {getGreeting()}
+            {character.stage.emoji} {character.stage.identityLabel}
           </Text>
+          <Text style={styles.subGreeting}>{getGreeting()}</Text>
           <Text style={styles.date}>
             {simulatedDate.toLocaleDateString("en-US", {
               weekday: "long",
@@ -270,9 +304,19 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Return User Welcome Banner */}
+      {returnMessage && !completedToday && (
+        <View style={styles.returnBanner}>
+          <Text style={styles.returnBannerText}>{returnMessage}</Text>
+        </View>
+      )}
+
       {/* Daily Challenge Card */}
       <View style={styles.challengeCard}>
         <Text style={styles.challengeLabel}>TODAY&apos;S CHALLENGE</Text>
+        {currentChallenge && !completedToday && !retroRequired && (
+          <Text style={styles.identityMessage}>{stageMessage}</Text>
+        )}
 
         {retroRequired ? (
           <View style={styles.placeholder}>
@@ -392,6 +436,8 @@ export default function HomeScreen() {
         fadeOut
         fallSpeed={3000}
       />
+
+      <EvolutionCelebration />
     </ScreenContainer>
   );
 }
@@ -429,6 +475,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: COLORS.text,
+    marginBottom: 2,
+  },
+  subGreeting: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   date: { fontSize: 14, color: COLORS.textSecondary },
@@ -453,6 +504,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
   },
+  returnBanner: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: "center",
+  },
+  returnBannerText: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 22,
+  },
   challengeCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
@@ -463,9 +528,16 @@ const styles = StyleSheet.create({
   challengeLabel: {
     fontSize: 12,
     color: COLORS.textSecondary,
-    marginBottom: 12,
+    marginBottom: 4,
     letterSpacing: 1,
     fontWeight: "600",
+  },
+  identityMessage: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontStyle: "italic",
+    marginBottom: 12,
+    lineHeight: 20,
   },
   challengeTitle: {
     fontSize: 20,
