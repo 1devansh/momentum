@@ -11,11 +11,11 @@ import * as Notifications from "expo-notifications";
 import { Href, router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Button, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
@@ -50,7 +50,7 @@ export default function NotificationsScreen() {
 
     await completeOnboarding();
     setIsGenerating(false);
-    router.replace("/(onboarding)/brave-move" as Href);
+    router.replace("/(main)/home" as Href);
   };
 
   const handleEnable = async () => {
