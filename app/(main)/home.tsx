@@ -1,33 +1,41 @@
 /**
  * Home Screen (Daily Challenge)
  *
- * Shows the user's current challenge from their active goal plan.
- * Enforces one-challenge-per-day. Allows notes on completion.
- * Pro users can switch between multiple goal plans.
+ * Shows the user's goals in a horizontal swipe carousel.
+ * The centered card is the active goal. Daily challenge updates
+ * automatically when swiping between goals.
+ *
+ * Includes weekly retro prompt when eligible.
+ *
+ * TODO: Add advanced analytics tracking
+ * TODO: Add push notification for new daily challenges
  */
 
 import { Href, router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
-import { Button, ScreenContainer } from "../../src/components";
+import { Button, GoalCarousel, ScreenContainer } from "../../src/components";
 import { COLORS } from "../../src/config";
 import {
-    selectCompletedToday,
-    selectCurrentChallenge,
-    selectStats,
-    useGoalPlanStore,
+  GoalPlan,
+  selectCompletedToday,
+  selectCurrentChallenge,
+  selectHasNewChallenge,
+  selectRetroRequired,
+  selectStats,
+  useGoalPlanStore,
 } from "../../src/features/challenges";
 import { computeCharacterState } from "../../src/features/character";
 import {
-    getDebugDate,
-    useDebugDateStore,
+  getDebugDate,
+  useDebugDateStore,
 } from "../../src/features/debug/debug-date";
 import { canCreateGoalPlan } from "../../src/features/premium";
 import { useSubscription } from "../../src/state";
@@ -40,12 +48,13 @@ export default function HomeScreen() {
   const completeCurrentChallenge = useGoalPlanStore(
     (s) => s.completeCurrentChallenge,
   );
+  const skipCurrentChallenge = useGoalPlanStore((s) => s.skipCurrentChallenge);
   const setActivePlan = useGoalPlanStore((s) => s.setActivePlan);
 
   const activePlan = plans.find((p) => p.id === activePlanId);
+  const activePlans = plans.filter((p) => !p.goalCompletedAt);
   // Subscribe to debug date offset so time travel triggers re-render
   const dayOffset = useDebugDateStore((s) => s.dayOffset);
-  // dayOffset is intentionally included to trigger recalculation when debug date changes
 
   const currentChallenge = React.useMemo(
     () => selectCurrentChallenge(plans, activePlanId),
@@ -56,12 +65,13 @@ export default function HomeScreen() {
     () => selectCompletedToday(plans, activePlanId),
     [plans, activePlanId, dayOffset],
   );
+
   const stats = selectStats(plans);
   const character = computeCharacterState(stats.totalCompleted);
+  const retroRequired = selectRetroRequired(activePlan);
 
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [notes, setNotes] = useState("");
-  const [showPlanSwitcher, setShowPlanSwitcher] = useState(false);
 
   const lastCompletedChallenge = activePlan
     ? (activePlan.challenges
@@ -80,8 +90,13 @@ export default function HomeScreen() {
     confettiRef.current?.start();
   };
 
+  const handleSkip = () => {
+    if (!activePlanId) return;
+    skipCurrentChallenge(activePlanId);
+  };
+
   const handleNewGoal = () => {
-    if (!canCreateGoalPlan(isPro, plans.length)) {
+    if (!canCreateGoalPlan(isPro, activePlans.length)) {
       router.push("/paywall" as Href);
       return;
     }
@@ -92,13 +107,22 @@ export default function HomeScreen() {
     router.push("/paywall" as Href);
   };
 
-  const handleSwitchPlan = (planId: string) => {
-    setActivePlan(planId);
-    setShowPlanSwitcher(false);
-  };
+  const handlePlanChange = useCallback(
+    (planId: string) => {
+      setActivePlan(planId);
+    },
+    [setActivePlan],
+  );
 
-  const planCompleted =
-    activePlan && activePlan.currentIndex >= activePlan.challenges.length;
+  const handleCardPress = useCallback((planId: string) => {
+    router.push(`/(main)/goal-detail?planId=${planId}` as Href);
+  }, []);
+
+  const checkHasNewChallenge = useCallback(
+    (plan: GoalPlan) => selectHasNewChallenge(plan),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dayOffset],
+  );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const simulatedDate = React.useMemo(() => getDebugDate(), [dayOffset]);
@@ -125,88 +149,29 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Active Goal + Plan Switcher */}
-      {activePlan && (
-        <TouchableOpacity
-          style={styles.goalBanner}
-          onPress={() =>
-            (plans.length > 1 || isPro) &&
-            setShowPlanSwitcher(!showPlanSwitcher)
-          }
-          activeOpacity={plans.length > 1 || isPro ? 0.7 : 1}
-        >
-          <View style={styles.goalHeader}>
-            <Text style={styles.goalLabel}>YOUR GOAL</Text>
-            {(plans.length > 1 || isPro) && (
-              <Text style={styles.switchHint}>
-                {showPlanSwitcher ? "▲" : "▼"}{" "}
-                {plans.length > 1 ? "Switch" : "Goals"}
-              </Text>
-            )}
-          </View>
-          <Text style={styles.goalText}>{activePlan.goal}</Text>
-          <View style={styles.goalProgressBar}>
-            <View
-              style={[
-                styles.goalProgressFill,
-                {
-                  width: `${activePlan.challenges.length > 0 ? (activePlan.challenges.filter((c) => c.completed).length / activePlan.challenges.length) * 100 : 0}%`,
-                },
-              ]}
-            />
-          </View>
-          <Text style={styles.goalProgress}>
-            {activePlan.challenges.filter((c) => c.completed).length === 0
-              ? "Just getting started"
-              : `${activePlan.challenges.filter((c) => c.completed).length} challenge${activePlan.challenges.filter((c) => c.completed).length === 1 ? "" : "s"} completed`}
-          </Text>
-        </TouchableOpacity>
+      {/* Goal Carousel */}
+      {activePlans.length > 0 && (
+        <GoalCarousel
+          plans={activePlans}
+          activePlanId={activePlanId}
+          onPlanChange={handlePlanChange}
+          onCardPress={handleCardPress}
+          hasNewChallenge={checkHasNewChallenge}
+        />
       )}
 
-      {/* Plan Switcher Dropdown */}
-      {showPlanSwitcher && (
-        <View style={styles.planSwitcher}>
-          {plans
-            .filter((p) => p.id !== activePlanId)
-            .map((plan) => {
-              const done = plan.challenges.filter((c) => c.completed).length;
-              return (
-                <TouchableOpacity
-                  key={plan.id}
-                  style={styles.planOption}
-                  onPress={() => handleSwitchPlan(plan.id)}
-                >
-                  <Text style={styles.planOptionGoal} numberOfLines={1}>
-                    {plan.goal}
-                  </Text>
-                  <Text style={styles.planOptionProgress}>{done} done</Text>
-                </TouchableOpacity>
-              );
-            })}
-          {canCreateGoalPlan(isPro, plans.length) && (
-            <TouchableOpacity
-              style={styles.planOptionNew}
-              onPress={() => {
-                setShowPlanSwitcher(false);
-                handleNewGoal();
-              }}
-            >
-              <Text style={styles.planOptionNewText}>+ Add new goal</Text>
+      {/* Add Goal / Upgrade CTA below carousel */}
+      {activePlans.length > 0 && (
+        <View style={styles.carouselActions}>
+          {canCreateGoalPlan(isPro, activePlans.length) ? (
+            <TouchableOpacity onPress={handleNewGoal}>
+              <Text style={styles.addGoalText}>+ Add goal</Text>
             </TouchableOpacity>
-          )}
-          {!canCreateGoalPlan(isPro, plans.length) && (
-            <TouchableOpacity
-              style={styles.planOptionNew}
-              onPress={() => {
-                setShowPlanSwitcher(false);
-                handleUpgrade();
-              }}
-            >
-              <Text style={styles.planOptionUpgrade}>
-                🔒 Upgrade to add more goals
-              </Text>
+          ) : !isPro ? (
+            <TouchableOpacity onPress={handleUpgrade}>
+              <Text style={styles.upgradeHint}>🔒 Upgrade for more goals</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       )}
 
@@ -214,7 +179,27 @@ export default function HomeScreen() {
       <View style={styles.challengeCard}>
         <Text style={styles.challengeLabel}>TODAY&apos;S CHALLENGE</Text>
 
-        {completedToday ? (
+        {retroRequired ? (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderEmoji}>🔄</Text>
+            <Text style={styles.placeholderTitle}>Time for a retro</Text>
+            <Text style={styles.placeholderText}>
+              You&apos;ve completed all your current challenges. Reflect on your
+              progress to unlock your next personalized batch.
+            </Text>
+            <Button
+              title="Open Goal & Start Retro"
+              onPress={() =>
+                activePlanId &&
+                router.push(
+                  `/(main)/goal-detail?planId=${activePlanId}` as Href,
+                )
+              }
+              size="medium"
+              style={styles.newGoalBtn}
+            />
+          </View>
+        ) : completedToday ? (
           <View style={styles.celebrationContent}>
             <Text style={styles.celebrationEmoji}>🎉</Text>
             <Text style={styles.celebrationTitle}>Done for today!</Text>
@@ -241,7 +226,6 @@ export default function HomeScreen() {
               {currentChallenge.description}
             </Text>
 
-            {/* Notes input */}
             <TextInput
               style={styles.notesInput}
               placeholder="Any thoughts or reflections? (optional)"
@@ -260,20 +244,9 @@ export default function HomeScreen() {
               size="large"
               style={styles.completeBtn}
             />
-          </View>
-        ) : planCompleted ? (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderEmoji}>🏆</Text>
-            <Text style={styles.placeholderTitle}>Plan Complete!</Text>
-            <Text style={styles.placeholderText}>
-              You crushed every challenge. Ready for a new goal?
-            </Text>
-            <Button
-              title="Set a new goal"
-              onPress={handleNewGoal}
-              size="medium"
-              style={styles.newGoalBtn}
-            />
+            <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
+              <Text style={styles.skipText}>Skip — not relevant</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.placeholder}>
@@ -371,76 +344,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   proBadgeText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-  goalBanner: {
-    backgroundColor: COLORS.primary + "12",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  carouselActions: {
     alignItems: "center",
+    paddingVertical: 8,
     marginBottom: 4,
   },
-  goalLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.primary,
-    letterSpacing: 1,
-  },
-  switchHint: { fontSize: 12, color: COLORS.primary },
-  goalText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  goalProgress: { fontSize: 13, color: COLORS.textSecondary },
-  goalProgressBar: {
-    height: 4,
-    backgroundColor: COLORS.surface,
-    borderRadius: 2,
-    overflow: "hidden" as const,
-    marginBottom: 6,
-    marginTop: 2,
-  },
-  goalProgressFill: {
-    height: "100%" as const,
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
-    minWidth: 2,
-  },
-  planSwitcher: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  planOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.background,
-  },
-  planOptionGoal: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
-    marginRight: 8,
-  },
-  planOptionProgress: { fontSize: 12, color: COLORS.textSecondary },
-  planOptionNew: { padding: 14 },
-  planOptionNewText: {
+  addGoalText: {
     fontSize: 14,
     color: COLORS.primary,
     fontWeight: "600",
   },
-  planOptionUpgrade: {
+  upgradeHint: {
     fontSize: 13,
     color: COLORS.textSecondary,
   },
@@ -449,7 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,
-    marginTop: 12,
+    marginTop: 4,
   },
   challengeLabel: {
     fontSize: 12,
@@ -481,6 +395,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   completeBtn: { width: "100%" },
+  skipBtn: { alignItems: "center", paddingVertical: 10 },
+  skipText: { fontSize: 14, color: COLORS.textSecondary },
   placeholder: { alignItems: "center", paddingVertical: 16 },
   placeholderEmoji: { fontSize: 48, marginBottom: 12 },
   placeholderTitle: {

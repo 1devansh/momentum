@@ -85,6 +85,12 @@ export default function MainLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="goal-detail"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

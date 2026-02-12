@@ -26,9 +26,11 @@ momentum/
 │   │   └── index.tsx
 │   └── (main)/              # Main app (tab navigation)
 │       ├── _layout.tsx
-│       ├── home.tsx         # Daily challenge screen
+│       ├── home.tsx         # Daily challenge screen (goal carousel)
 │       ├── progress.tsx     # Character growth screen
-│       └── settings.tsx     # Settings screen
+│       ├── settings.tsx     # Settings screen
+│       ├── new-goal.tsx     # Create new goal plan
+│       └── edit-goal.tsx    # Edit/delete goal plan
 │
 ├── src/                      # Source code (non-routing)
 │   ├── config/              # App configuration
@@ -47,14 +49,22 @@ momentum/
 │   │
 │   ├── components/          # Reusable UI components
 │   │   ├── ui/              # Generic UI components
+│   │   ├── goals/           # Goal-specific components
+│   │   │   ├── GoalCarousel.tsx  # Horizontal swipe goal switcher
+│   │   │   └── WeeklyRetro.tsx   # Weekly retro form
 │   │   └── index.ts
 │   │
 │   ├── hooks/               # Custom React hooks
 │   │   └── index.ts
 │   │
 │   ├── features/            # Domain-specific features
-│   │   ├── challenges/      # Challenge system (TODO)
-│   │   ├── character/       # Character growth (TODO)
+│   │   ├── challenges/      # Challenge system
+│   │   │   ├── ai-generator.ts   # AI generation + retro regeneration
+│   │   │   ├── store.ts          # Zustand store (goal CRUD, retro)
+│   │   │   ├── types.ts          # Domain types (GoalPlan, WeeklyRetro)
+│   │   │   └── storage.ts        # AsyncStorage persistence
+│   │   ├── character/       # Character growth
+│   │   ├── premium/         # Premium gating
 │   │   └── index.ts
 │   │
 │   └── index.ts             # Main barrel export
@@ -103,6 +113,7 @@ State is split into logical domains:
 
 - `UserContext`: User preferences, onboarding status
 - `SubscriptionContext`: RevenueCat state, entitlements
+- `GoalPlanStore` (Zustand): Goal plans, challenges, retros, AI generation
 
 ### 4. Centralized Service Layer
 

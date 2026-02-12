@@ -6,14 +6,31 @@
  *
  * TODO: Add backend sync action
  * TODO: Add optimistic updates when backend is available
+ * TODO: Add advanced analytics tracking
  */
 
 import * as Crypto from "expo-crypto";
 import { create } from "zustand";
+import { computeCharacterState } from "../character";
 import { getDebugDate, getDebugTodayKey } from "../debug/debug-date";
-import { generateChallenges } from "./ai-generator";
+import {
+  generateChallenges,
+  regenerateChallengesWithRetro,
+  RetroContext,
+} from "./ai-generator";
 import { clearGoalPlans, loadGoalPlans, saveGoalPlans } from "./storage";
-import { GoalPlan, GoalPlanState, MicroChallenge } from "./types";
+import {
+  GoalPlan,
+  GoalPlanState,
+  MicroChallenge,
+  RetroFeeling,
+  WeeklyRetro,
+} from "./types";
+
+const RETRO_CHALLENGE_THRESHOLD = 7;
+
+/** Exported so UI can display retro countdown */
+export { RETRO_CHALLENGE_THRESHOLD };
 
 interface GoalPlanActions {
   /** Load plans from storage on app start */
@@ -24,10 +41,25 @@ interface GoalPlanActions {
   setActivePlan: (planId: string) => void;
   /** Mark the current challenge as complete and advance */
   completeCurrentChallenge: (planId: string, notes?: string) => void;
+  /** Skip the current challenge (not relevant / already done) and advance */
+  skipCurrentChallenge: (planId: string) => void;
   /** Delete a goal plan */
   deletePlan: (planId: string) => void;
   /** Regenerate challenges for a plan (premium) */
   regeneratePlan: (planId: string) => Promise<void>;
+  /** Edit goal title and/or description (future challenges only) */
+  editGoal: (
+    planId: string,
+    updates: { goal?: string; description?: string },
+  ) => void;
+  /** Submit a weekly retro and regenerate remaining challenges */
+  submitRetro: (
+    planId: string,
+    reflection: string,
+    feeling?: RetroFeeling,
+  ) => Promise<void>;
+  /** Mark a goal as fully completed/achieved */
+  completeGoal: (planId: string) => void;
   /** Reset all data (sign out) */
   reset: () => Promise<void>;
 }
@@ -76,6 +108,8 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
         createdAt: now,
         updatedAt: now,
         isActive: true,
+        retros: [],
+        completedAtLastRetro: 0,
       };
 
       const { plans } = get();
@@ -151,6 +185,35 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
     saveGoalPlans(updatedPlans);
   },
 
+  skipCurrentChallenge: (planId) => {
+    const { plans } = get();
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) return;
+
+    const current = plan.challenges[plan.currentIndex];
+    if (!current || current.completed) return;
+
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== planId) return p;
+
+      // Remove the skipped challenge entirely
+      const updatedChallenges = p.challenges.filter(
+        (_, i) => i !== p.currentIndex,
+      );
+
+      // currentIndex now points to the next challenge (same index, shorter array)
+      return {
+        ...p,
+        challenges: updatedChallenges,
+        currentIndex: Math.min(p.currentIndex, updatedChallenges.length),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    set({ plans: updatedPlans });
+    saveGoalPlans(updatedPlans);
+  },
+
   deletePlan: (planId) => {
     const { plans, activePlanId } = get();
     const updatedPlans = plans.filter((p) => p.id !== planId);
@@ -191,6 +254,134 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
       console.error("[GoalPlanStore] Error regenerating plan:", error);
       set({ isGenerating: false, error: "Failed to regenerate challenges" });
     }
+  },
+
+  editGoal: (planId, updates) => {
+    const { plans } = get();
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== planId) return p;
+      return {
+        ...p,
+        ...(updates.goal !== undefined && { goal: updates.goal }),
+        ...(updates.description !== undefined && {
+          description: updates.description,
+        }),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    set({ plans: updatedPlans });
+    saveGoalPlans(updatedPlans);
+  },
+
+  submitRetro: async (planId, reflection, feeling) => {
+    const { plans } = get();
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) return;
+
+    const completedChallenges = plan.challenges.filter((c) => c.completed);
+
+    // Compute character stage for AI context
+    let totalCompleted = 0;
+    for (const p of plans) {
+      for (const c of p.challenges) {
+        if (c.completed) totalCompleted++;
+      }
+    }
+    const character = computeCharacterState(totalCompleted);
+
+    const retroContext: RetroContext = {
+      completedChallengeTitles: completedChallenges.map((c) => c.title),
+      reflection,
+      feeling,
+      progressStage: character.stage.name,
+    };
+
+    set({ isGenerating: true, error: null });
+    try {
+      // Always generate a fresh batch of 7 challenges
+      const newChallenges = await regenerateChallengesWithRetro(
+        plan.goal,
+        plan.focusAreas,
+        retroContext,
+        RETRO_CHALLENGE_THRESHOLD,
+      );
+
+      const retro: WeeklyRetro = {
+        id: Crypto.randomUUID(),
+        planId,
+        reflection,
+        feeling,
+        completedChallengeCount: completedChallenges.length,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedPlans = plans.map((p) => {
+        if (p.id !== planId) return p;
+
+        const isEarlyRetro = p.currentIndex < p.challenges.length;
+
+        if (isEarlyRetro) {
+          // Early retro: keep completed, replace remaining incomplete with new batch
+          const kept = p.challenges.filter((c) => c.completed);
+          const reordered = newChallenges.map(
+            (c: MicroChallenge, i: number) => ({
+              ...c,
+              order: kept.length + i,
+            }),
+          );
+          return {
+            ...p,
+            challenges: [...kept, ...reordered],
+            currentIndex: kept.length, // point to first new challenge
+            retros: [...(p.retros || []), retro],
+            completedAtLastRetro: kept.length,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
+        // Forced retro (all challenges completed): append new batch
+        const reordered = newChallenges.map((c: MicroChallenge, i: number) => ({
+          ...c,
+          order: p.challenges.length + i,
+        }));
+        return {
+          ...p,
+          challenges: [...p.challenges, ...reordered],
+          retros: [...(p.retros || []), retro],
+          completedAtLastRetro: completedChallenges.length,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+
+      set({ plans: updatedPlans, isGenerating: false });
+      await saveGoalPlans(updatedPlans);
+    } catch (error) {
+      console.error("[GoalPlanStore] Error submitting retro:", error);
+      set({ isGenerating: false, error: "Failed to regenerate challenges" });
+    }
+  },
+
+  completeGoal: (planId) => {
+    const { plans, activePlanId } = get();
+    const updatedPlans = plans.map((p) => {
+      if (p.id !== planId) return p;
+      return {
+        ...p,
+        goalCompletedAt: new Date().toISOString(),
+        isActive: false,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    // If the completed goal was active, switch to another plan
+    const newActiveId =
+      planId === activePlanId
+        ? (updatedPlans.find((p) => !p.goalCompletedAt && p.id !== planId)
+            ?.id ?? null)
+        : activePlanId;
+
+    set({ plans: updatedPlans, activePlanId: newActiveId });
+    saveGoalPlans(updatedPlans);
   },
 
   reset: async () => {
@@ -301,4 +492,53 @@ export function selectCompletedHistory(plans: GoalPlan[]): CompletedEntry[] {
   );
 
   return entries;
+}
+
+/**
+ * Check if a plan requires a retro before continuing.
+ * Required when all current challenges are completed (batch of 7 done).
+ */
+export function selectRetroRequired(plan: GoalPlan | undefined): boolean {
+  if (!plan) return false;
+  return (
+    plan.currentIndex >= plan.challenges.length && plan.challenges.length > 0
+  );
+}
+
+/**
+ * Check if a plan is eligible for a weekly retro.
+ * Eligible after 7 completed challenges since last retro (or since start),
+ * OR always available manually.
+ */
+export function selectRetroEligible(plan: GoalPlan | undefined): boolean {
+  if (!plan) return false;
+  const completed = plan.challenges.filter((c) => c.completed).length;
+  const sinceLastRetro = completed - (plan.completedAtLastRetro || 0);
+  return sinceLastRetro >= RETRO_CHALLENGE_THRESHOLD;
+}
+
+/**
+ * Check if a plan has a new daily challenge available (not yet completed today).
+ */
+export function selectHasNewChallenge(plan: GoalPlan | undefined): boolean {
+  if (!plan) return false;
+  if (plan.currentIndex >= plan.challenges.length) return false;
+  const current = plan.challenges[plan.currentIndex];
+  if (!current || current.completed) return false;
+  // Not completed today
+  if (current.completedAt) {
+    return current.completedAt.slice(0, 10) !== todayKey();
+  }
+  return true;
+}
+
+/**
+ * Get the number of challenges remaining until the next retro is available.
+ * Returns 0 if already eligible.
+ */
+export function selectChallengesUntilRetro(plan: GoalPlan | undefined): number {
+  if (!plan) return RETRO_CHALLENGE_THRESHOLD;
+  const completed = plan.challenges.filter((c) => c.completed).length;
+  const sinceLastRetro = completed - (plan.completedAtLastRetro || 0);
+  return Math.max(0, RETRO_CHALLENGE_THRESHOLD - sinceLastRetro);
 }

@@ -3,6 +3,7 @@
  *
  * Generates personalized micro-challenges using Gemini AI.
  * Falls back to static challenges on failure.
+ * Supports retro-aware regeneration that adapts to user progress.
  *
  * TODO: Add rate limiting and caching
  * TODO: Support creator-led challenge templates
@@ -10,9 +11,17 @@
 
 import * as Crypto from "expo-crypto";
 import { FALLBACK_CHALLENGES } from "./fallback-challenges";
-import { MicroChallenge } from "./types";
+import { MicroChallenge, RetroFeeling } from "./types";
 
-const CHALLENGE_COUNT = 12;
+const CHALLENGE_COUNT = 7;
+
+/** Context for retro-aware regeneration */
+export interface RetroContext {
+  completedChallengeTitles: string[];
+  reflection: string;
+  feeling?: RetroFeeling;
+  progressStage: string; // e.g. "Sprout", "Sapling"
+}
 
 /**
  * Build the prompt for AI challenge generation.
@@ -28,6 +37,48 @@ Rules:
 - Each challenge should take under 10 minutes
 - Focus on action, not planning
 - Include a short encouraging message for each
+- Make them feel personal and achievable
+
+Respond ONLY with a JSON array. Each item must have:
+- "title": string (short, action-oriented)
+- "description": string (1-2 sentences, specific instructions)
+- "encouragement": string (1 sentence, warm and motivating)
+
+No markdown, no explanation, just the JSON array.`;
+}
+
+/**
+ * Build a retro-aware prompt that adapts remaining challenges
+ * based on user reflection and progress.
+ */
+function buildRetroPrompt(
+  goal: string,
+  focusAreas: string[],
+  retro: RetroContext,
+  remainingCount: number,
+): string {
+  const areasStr =
+    focusAreas.length > 0 ? focusAreas.join(", ") : "general personal growth";
+  const feelingHint = retro.feeling
+    ? `They're currently feeling: ${retro.feeling}.`
+    : "";
+
+  return `Regenerate ${remainingCount} micro-challenges for someone whose goal is: "${goal}".
+Their focus areas are: ${areasStr}.
+
+Progress so far:
+- Completed challenges: ${retro.completedChallengeTitles.join(", ")}
+- Character stage: ${retro.progressStage}
+- Their reflection: "${retro.reflection}"
+${feelingHint}
+
+Rules:
+- Adapt difficulty based on their progress and feeling
+- If they feel stuck or overwhelmed, make challenges slightly easier and more encouraging
+- If they feel confident or motivated, gently increase the challenge
+- Each challenge should take under 10 minutes
+- Focus on action, not planning
+- Build on what they've already accomplished
 - Make them feel personal and achievable
 
 Respond ONLY with a JSON array. Each item must have:
@@ -125,6 +176,12 @@ async function callAI(prompt: string): Promise<string | null> {
     promptPreview: prompt.slice(0, 120) + "...",
   });
 
+  console.log("[AIGenerator] 📝 Full prompt:\n", prompt);
+  console.log(
+    "[AIGenerator] 📦 Full request body:",
+    JSON.stringify(requestBody, null, 2),
+  );
+
   const startTime = Date.now();
 
   try {
@@ -164,6 +221,10 @@ async function callAI(prompt: string): Promise<string | null> {
         : "N/A",
     });
 
+    if (text) {
+      console.log("[AIGenerator] 📝 Full response:\n", text);
+    }
+
     return text;
   } catch (error) {
     const elapsed = Date.now() - startTime;
@@ -195,7 +256,35 @@ export async function generateChallenges(
     }
   }
 
-  // Fallback: use static challenges
+  // Fallback: use static challenges (sliced to CHALLENGE_COUNT)
   console.log("[AIGenerator] Using fallback challenge set");
-  return toChallenges(FALLBACK_CHALLENGES);
+  return toChallenges(FALLBACK_CHALLENGES.slice(0, CHALLENGE_COUNT));
+}
+
+/**
+ * Regenerate remaining challenges based on weekly retro context.
+ * Preserves completed challenges, only generates replacements for future ones.
+ *
+ * Falls back to a subset of static challenges on failure.
+ */
+export async function regenerateChallengesWithRetro(
+  goal: string,
+  focusAreas: string[],
+  retro: RetroContext,
+  remainingCount: number,
+): Promise<MicroChallenge[]> {
+  const prompt = buildRetroPrompt(goal, focusAreas, retro, remainingCount);
+  const aiResponse = await callAI(prompt);
+
+  if (aiResponse) {
+    const parsed = parseAIResponse(aiResponse);
+    if (parsed) {
+      console.log("[AIGenerator] Successfully regenerated retro challenges");
+      return toChallenges(parsed.slice(0, remainingCount));
+    }
+  }
+
+  // Fallback: use subset of static challenges
+  console.log("[AIGenerator] Using fallback for retro regeneration");
+  return toChallenges(FALLBACK_CHALLENGES.slice(0, remainingCount));
 }
