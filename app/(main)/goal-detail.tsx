@@ -23,10 +23,11 @@ import {
   RETRO_CHALLENGE_THRESHOLD,
   RetroFeeling,
   selectChallengesUntilRetro,
+  selectManualRetroCount,
   selectRetroRequired,
   useGoalPlanStore,
 } from "../../src/features/challenges";
-import { canDeleteGoalPlan } from "../../src/features/premium";
+import { canDeleteGoalPlan, canManualRetro } from "../../src/features/premium";
 import { useSubscription } from "../../src/state";
 
 export default function GoalDetailScreen() {
@@ -46,6 +47,9 @@ export default function GoalDetailScreen() {
   const [editedGoal, setEditedGoal] = useState(plan?.goal ?? "");
   const [editedDesc, setEditedDesc] = useState(plan?.description ?? "");
   const [showRetro, setShowRetro] = useState(false);
+  const [showRetroPaywall, setShowRetroPaywall] = useState(false);
+
+  const manualRetroCount = selectManualRetroCount(plans);
 
   if (!plan) {
     return (
@@ -102,7 +106,8 @@ export default function GoalDetailScreen() {
     feeling?: RetroFeeling,
   ) => {
     if (!planId) return;
-    await submitRetro(planId, reflection, feeling);
+    const isManual = !retroRequired;
+    await submitRetro(planId, reflection, feeling, isManual);
     // Don't dismiss here — WeeklyRetro will show the adaptation result
     // and dismiss itself when the user taps "Got It"
   };
@@ -268,7 +273,13 @@ export default function GoalDetailScreen() {
               </View>
               {!showRetro && (
                 <TouchableOpacity
-                  onPress={() => setShowRetro(true)}
+                  onPress={() => {
+                    if (canManualRetro(isPro, manualRetroCount)) {
+                      setShowRetro(true);
+                    } else {
+                      setShowRetroPaywall(true);
+                    }
+                  }}
                   style={styles.manualRetroBtn}
                 >
                   <Text style={styles.manualRetroText}>
@@ -276,6 +287,31 @@ export default function GoalDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
+            </View>
+          )}
+
+          {showRetroPaywall && !showRetro && (
+            <View style={styles.retroPaywall}>
+              <Text style={styles.retroPaywallEmoji}>🔒</Text>
+              <Text style={styles.retroPaywallTitle}>
+                Unlimited Early Retros
+              </Text>
+              <Text style={styles.retroPaywallDesc}>
+                You've used your free early retro. Upgrade to Pro to reflect and
+                adapt your challenges anytime you need.
+              </Text>
+              <Button
+                title="Upgrade to Pro"
+                onPress={() => router.push("/paywall" as Href)}
+                size="medium"
+                style={styles.retroPaywallBtn}
+              />
+              <TouchableOpacity
+                onPress={() => setShowRetroPaywall(false)}
+                style={styles.dismissBtn}
+              >
+                <Text style={styles.dismissText}>Not now</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -462,6 +498,37 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "500",
   },
+  retroPaywall: {
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 12,
+  },
+  retroPaywallEmoji: {
+    fontSize: 36,
+    marginBottom: 8,
+  },
+  retroPaywallTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  retroPaywallDesc: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  retroPaywallBtn: {
+    width: "100%",
+    marginBottom: 4,
+  },
+  dismissBtn: { padding: 8 },
+  dismissText: { fontSize: 14, color: COLORS.textSecondary },
   completedSection: { marginBottom: 24 },
   completedItem: {
     backgroundColor: COLORS.surface,

@@ -15,6 +15,7 @@ export {
     selectCompletedToday,
     selectCurrentChallenge,
     selectHasNewChallenge,
+    selectManualRetroCount,
     selectRetroEligible,
     selectRetroRequired,
     selectStats,

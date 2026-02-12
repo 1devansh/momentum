@@ -68,6 +68,8 @@ export interface WeeklyRetro {
   adaptation?: AdaptationResult;
   /** Insight snapshot at time of retro */
   insight?: WeeklyInsight;
+  /** Whether this was a manual (early) retro vs forced */
+  isManual?: boolean;
 }
 
 export interface GoalPlan {

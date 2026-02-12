@@ -12,6 +12,7 @@
  */
 
 const FREE_PLAN_LIMIT = 1;
+const FREE_MANUAL_RETRO_LIMIT = 1;
 
 export interface PremiumLimits {
   maxGoalPlans: number;
@@ -20,6 +21,7 @@ export interface PremiumLimits {
   canDeleteGoal: boolean;
   canSubmitRetro: boolean;
   canAccessPremiumPrograms: boolean;
+  maxManualRetros: number;
   // TODO: Add more premium feature flags
   // canExportData: boolean;
 }
@@ -32,6 +34,7 @@ export function getPremiumLimits(isPro: boolean): PremiumLimits {
     canDeleteGoal: true, // gated by plan count in UI
     canSubmitRetro: true, // retro is available to all users
     canAccessPremiumPrograms: isPro,
+    maxManualRetros: isPro ? Infinity : FREE_MANUAL_RETRO_LIMIT,
   };
 }
 
@@ -73,4 +76,16 @@ export function canAccessProgram(
 ): boolean {
   if (!program.premium) return true;
   return isPro;
+}
+
+/**
+ * Can a free user start a manual (early) retro?
+ * Free users get 1 manual retro for free. After that, they need Pro.
+ */
+export function canManualRetro(
+  isPro: boolean,
+  manualRetroCount: number,
+): boolean {
+  if (isPro) return true;
+  return manualRetroCount < FREE_MANUAL_RETRO_LIMIT;
 }

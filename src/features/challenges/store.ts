@@ -58,6 +58,7 @@ interface GoalPlanActions {
     planId: string,
     reflection: string,
     feeling?: RetroFeeling,
+    isManual?: boolean,
   ) => Promise<void>;
   /** Mark a goal as fully completed/achieved */
   completeGoal: (planId: string) => void;
@@ -274,7 +275,7 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
     saveGoalPlans(updatedPlans);
   },
 
-  submitRetro: async (planId, reflection, feeling) => {
+  submitRetro: async (planId, reflection, feeling, isManual) => {
     const { plans } = get();
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
@@ -327,6 +328,7 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
         createdAt: new Date().toISOString(),
         adaptation,
         insight,
+        isManual: isManual ?? false,
       };
 
       const updatedPlans = plans.map((p) => {
@@ -555,4 +557,16 @@ export function selectChallengesUntilRetro(plan: GoalPlan | undefined): number {
   const completed = plan.challenges.filter((c) => c.completed).length;
   const sinceLastRetro = completed - (plan.completedAtLastRetro || 0);
   return Math.max(0, RETRO_CHALLENGE_THRESHOLD - sinceLastRetro);
+}
+
+/**
+ * Count total manual (early) retros across all plans.
+ * Used for premium gating of manual retros.
+ */
+export function selectManualRetroCount(plans: GoalPlan[]): number {
+  return plans.reduce(
+    (count, plan) =>
+      count + plan.retros.filter((r) => r.isManual === true).length,
+    0,
+  );
 }

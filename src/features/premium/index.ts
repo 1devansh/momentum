@@ -4,6 +4,7 @@
 export {
     canAccessProgram,
     canCreateGoalPlan,
+    canManualRetro,
     canRegeneratePlan,
     getPremiumLimits
 } from "./gate";
