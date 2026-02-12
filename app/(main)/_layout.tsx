@@ -57,17 +57,16 @@ export default function MainLayout() {
           ),
         }}
       />
-      {FEATURE_FLAGS.enableDebugScreen && (
-        <Tabs.Screen
-          name="debug"
-          options={{
-            title: "Debug",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="bug-outline" size={size} color={color} />
-            ),
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="debug"
+        options={{
+          title: "Debug",
+          href: FEATURE_FLAGS.enableDebugScreen ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bug-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{

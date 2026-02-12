@@ -10,6 +10,7 @@
 
 import * as Crypto from "expo-crypto";
 import { create } from "zustand";
+import { getDebugDate, getDebugTodayKey } from "../debug/debug-date";
 import { generateChallenges } from "./ai-generator";
 import { clearGoalPlans, loadGoalPlans, saveGoalPlans } from "./storage";
 import { GoalPlan, GoalPlanState, MicroChallenge } from "./types";
@@ -35,9 +36,10 @@ type GoalPlanStore = GoalPlanState & GoalPlanActions;
 
 /**
  * Get today's date as YYYY-MM-DD string for daily gating.
+ * Uses debug date offset when active.
  */
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getDebugTodayKey();
 }
 
 /**
@@ -121,7 +123,7 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
           return {
             ...c,
             completed: true,
-            completedAt: new Date().toISOString(),
+            completedAt: getDebugDate().toISOString(),
             notes: notes?.trim() || undefined,
           };
         }

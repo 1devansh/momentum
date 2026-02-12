@@ -25,6 +25,10 @@ import {
     useGoalPlanStore,
 } from "../../src/features/challenges";
 import { computeCharacterState } from "../../src/features/character";
+import {
+    getDebugDate,
+    useDebugDateStore,
+} from "../../src/features/debug/debug-date";
 import { canCreateGoalPlan } from "../../src/features/premium";
 import { useSubscription } from "../../src/state";
 
@@ -39,8 +43,19 @@ export default function HomeScreen() {
   const setActivePlan = useGoalPlanStore((s) => s.setActivePlan);
 
   const activePlan = plans.find((p) => p.id === activePlanId);
-  const currentChallenge = selectCurrentChallenge(plans, activePlanId);
-  const completedToday = selectCompletedToday(plans, activePlanId);
+  // Subscribe to debug date offset so time travel triggers re-render
+  const dayOffset = useDebugDateStore((s) => s.dayOffset);
+  // dayOffset is intentionally included to trigger recalculation when debug date changes
+
+  const currentChallenge = React.useMemo(
+    () => selectCurrentChallenge(plans, activePlanId),
+    [plans, activePlanId, dayOffset],
+  );
+
+  const completedToday = React.useMemo(
+    () => selectCompletedToday(plans, activePlanId),
+    [plans, activePlanId, dayOffset],
+  );
   const stats = selectStats(plans);
   const character = computeCharacterState(stats.totalCompleted);
 
@@ -85,6 +100,9 @@ export default function HomeScreen() {
   const planCompleted =
     activePlan && activePlan.currentIndex >= activePlan.challenges.length;
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const simulatedDate = React.useMemo(() => getDebugDate(), [dayOffset]);
+
   return (
     <ScreenContainer scrollable>
       <View style={styles.header}>
@@ -93,7 +111,7 @@ export default function HomeScreen() {
             {character.stage.emoji} {getGreeting()}
           </Text>
           <Text style={styles.date}>
-            {new Date().toLocaleDateString("en-US", {
+            {simulatedDate.toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
@@ -311,7 +329,7 @@ export default function HomeScreen() {
 }
 
 function getGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = getDebugDate().getHours();
   if (hour < 12) return "Good morning!";
   if (hour < 17) return "Good afternoon!";
   return "Good evening!";
