@@ -49,6 +49,15 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="programs"
+        options={{
+          title: "Programs",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
@@ -87,6 +96,12 @@ export default function MainLayout() {
       />
       <Tabs.Screen
         name="goal-detail"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="program-detail"
         options={{
           href: null,
         }}

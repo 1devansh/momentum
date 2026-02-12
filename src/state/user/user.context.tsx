@@ -16,6 +16,7 @@ import React, {
 } from "react";
 import { STORAGE_KEYS } from "../../config/constants";
 import { useGoalPlanStore } from "../../features/challenges";
+import { useProgramStore } from "../../features/programs";
 import {
     clearUserProfile,
     getOrCreateUserProfile,
@@ -265,6 +266,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_GOAL),
         AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_FOCUS_AREAS),
         useGoalPlanStore.getState().reset(),
+        useProgramStore.getState().reset(),
       ]);
       updateState({
         hasOnboarded: false,

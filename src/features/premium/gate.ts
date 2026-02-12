@@ -6,7 +6,6 @@
  *
  * Entitlement: "momentum_plus" (RevenueCat)
  *
- * TODO: Add creator-led program gating
  * TODO: Add promotional unlock support
  * TODO: Add trial period logic
  * TODO: Add enhanced premium tiers
@@ -20,8 +19,8 @@ export interface PremiumLimits {
   canEditGoal: boolean;
   canDeleteGoal: boolean;
   canSubmitRetro: boolean;
+  canAccessPremiumPrograms: boolean;
   // TODO: Add more premium feature flags
-  // canAccessCreatorPrograms: boolean;
   // canExportData: boolean;
 }
 
@@ -32,6 +31,7 @@ export function getPremiumLimits(isPro: boolean): PremiumLimits {
     canEditGoal: true, // all users can edit
     canDeleteGoal: true, // gated by plan count in UI
     canSubmitRetro: true, // retro is available to all users
+    canAccessPremiumPrograms: isPro,
   };
 }
 
@@ -57,4 +57,20 @@ export function canDeleteGoalPlan(
 ): boolean {
   if (currentPlanCount <= 1) return true; // always allow deleting last plan
   return isPro || currentPlanCount > 1;
+}
+
+/**
+ * Can a user enroll in a specific creator program?
+ * Free users can access non-premium programs only.
+ * Pro users can access all programs.
+ *
+ * TODO: Add individual program purchase check
+ * TODO: Add promotional unlock check
+ */
+export function canAccessProgram(
+  isPro: boolean,
+  program: CreatorProgram,
+): boolean {
+  if (!program.premium) return true;
+  return isPro;
 }

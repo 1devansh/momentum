@@ -14,6 +14,7 @@
 import { Href, router } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
+  Animated,
   StyleSheet,
   Text,
   TextInput,
@@ -38,6 +39,11 @@ import {
   useDebugDateStore,
 } from "../../src/features/debug/debug-date";
 import { canCreateGoalPlan } from "../../src/features/premium";
+import {
+  selectActiveCreatorProgram,
+  selectTodayProgramDay,
+  useProgramStore,
+} from "../../src/features/programs";
 import { useSubscription } from "../../src/state";
 
 export default function HomeScreen() {
@@ -53,6 +59,17 @@ export default function HomeScreen() {
 
   const activePlan = plans.find((p) => p.id === activePlanId);
   const activePlans = plans.filter((p) => !p.goalCompletedAt);
+
+  // Creator program state
+  const programList = useProgramStore((s) => s.programs);
+  const activeEnrollment = useProgramStore((s) => s.activeProgram);
+  const completeProgramDay = useProgramStore((s) => s.completeDay);
+  const activeCreatorProgram = selectActiveCreatorProgram(
+    programList,
+    activeEnrollment,
+  );
+  const todayProgramDay = selectTodayProgramDay(programList, activeEnrollment);
+
   // Subscribe to debug date offset so time travel triggers re-render
   const dayOffset = useDebugDateStore((s) => s.dayOffset);
 
@@ -73,6 +90,15 @@ export default function HomeScreen() {
   const confettiRef = useRef<ConfettiCannon | null>(null);
   const [notes, setNotes] = useState("");
 
+  // Program day completion animation state
+  const [programDayDone, setProgramDayDone] = useState(false);
+  const [completedProgramDayInfo, setCompletedProgramDayInfo] = useState<{
+    encouragement: string;
+    dayNum: number;
+    totalDays: number;
+  } | null>(null);
+  const programSlideAnim = useRef(new Animated.Value(0)).current;
+
   const lastCompletedChallenge = activePlan
     ? (activePlan.challenges
         .filter((c) => c.completed)
@@ -88,6 +114,31 @@ export default function HomeScreen() {
     completeCurrentChallenge(activePlanId, notes);
     setNotes("");
     confettiRef.current?.start();
+  };
+
+  const handleProgramComplete = () => {
+    if (!activeEnrollment || !todayProgramDay || !activeCreatorProgram) return;
+
+    // Capture the current day info before the store advances
+    const dayInfo = {
+      encouragement: todayProgramDay.encouragement,
+      dayNum: activeEnrollment.currentDay,
+      totalDays: activeCreatorProgram.durationDays,
+    };
+
+    // Slide out the challenge card
+    Animated.timing(programSlideAnim, {
+      toValue: -400,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      // After slide-out: update store, show celebration
+      completeProgramDay();
+      setCompletedProgramDayInfo(dayInfo);
+      setProgramDayDone(true);
+      programSlideAnim.setValue(0);
+      confettiRef.current?.start();
+    });
   };
 
   const handleSkip = () => {
@@ -172,6 +223,50 @@ export default function HomeScreen() {
               <Text style={styles.upgradeHint}>🔒 Upgrade for more goals</Text>
             </TouchableOpacity>
           ) : null}
+        </View>
+      )}
+
+      {/* Active Program Day Card (takes priority when enrolled) */}
+      {activeCreatorProgram && activeEnrollment && todayProgramDay && (
+        <View style={styles.challengeCard}>
+          <Text style={styles.challengeLabel}>
+            📘 {activeCreatorProgram.title.toUpperCase()} — DAY{" "}
+            {programDayDone
+              ? completedProgramDayInfo?.dayNum
+              : activeEnrollment.currentDay}
+            /{activeCreatorProgram.durationDays}
+          </Text>
+
+          {programDayDone && completedProgramDayInfo ? (
+            <View style={styles.celebrationContent}>
+              <Text style={styles.celebrationEmoji}>🎉</Text>
+              <Text style={styles.celebrationTitle}>Program day complete!</Text>
+              <Text style={styles.celebrationText}>
+                {completedProgramDayInfo.encouragement}
+              </Text>
+              <Text style={styles.comeBackText}>
+                {completedProgramDayInfo.dayNum <
+                completedProgramDayInfo.totalDays
+                  ? `Come back tomorrow for Day ${completedProgramDayInfo.dayNum + 1}.`
+                  : "You finished the program! Amazing work."}
+              </Text>
+            </View>
+          ) : (
+            <Animated.View
+              style={{ transform: [{ translateX: programSlideAnim }] }}
+            >
+              <Text style={styles.challengeTitle}>{todayProgramDay.title}</Text>
+              <Text style={styles.challengeDescription}>
+                {todayProgramDay.description}
+              </Text>
+              <Button
+                title="I did it ✓"
+                onPress={handleProgramComplete}
+                size="large"
+                style={styles.completeBtn}
+              />
+            </Animated.View>
+          )}
         </View>
       )}
 

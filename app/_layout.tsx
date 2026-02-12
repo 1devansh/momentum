@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useGoalPlanStore } from "../src/features/challenges";
+import { useProgramStore } from "../src/features/programs";
 import { initializePurchases } from "../src/services";
 import { SubscriptionProvider, UserProvider } from "../src/state";
 
@@ -34,6 +35,9 @@ export default function RootLayout() {
 
         // Hydrate goal plan store from local storage
         await useGoalPlanStore.getState().hydrate();
+
+        // Hydrate creator program enrollment from local storage
+        await useProgramStore.getState().hydrate();
       } catch (error) {
         console.error("App initialization error:", error);
         // TODO: Handle initialization errors gracefully
