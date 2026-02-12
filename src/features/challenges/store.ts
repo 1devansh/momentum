@@ -13,6 +13,7 @@ import * as Crypto from "expo-crypto";
 import { create } from "zustand";
 import { computeCharacterState } from "../character";
 import { getDebugDate, getDebugTodayKey } from "../debug/debug-date";
+import { computeAdaptation, computeWeeklyInsight } from "./adaptation";
 import {
   generateChallenges,
   regenerateChallengesWithRetro,
@@ -280,6 +281,12 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
 
     const completedChallenges = plan.challenges.filter((c) => c.completed);
 
+    // Compute weekly insight
+    const insight = computeWeeklyInsight(plan);
+
+    // Compute adaptation based on feeling + insight
+    const adaptation = computeAdaptation(feeling, insight);
+
     // Compute character stage for AI context
     let totalCompleted = 0;
     for (const p of plans) {
@@ -294,16 +301,21 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
       reflection,
       feeling,
       progressStage: character.stage.name,
+      adaptation,
     };
 
     set({ isGenerating: true, error: null });
     try {
-      // Always generate a fresh batch of 7 challenges
+      // Generate count: add 1 if stretch task is requested
+      const generateCount = adaptation.addStretchTask
+        ? RETRO_CHALLENGE_THRESHOLD + 1
+        : RETRO_CHALLENGE_THRESHOLD;
+
       const newChallenges = await regenerateChallengesWithRetro(
         plan.goal,
         plan.focusAreas,
         retroContext,
-        RETRO_CHALLENGE_THRESHOLD,
+        generateCount,
       );
 
       const retro: WeeklyRetro = {
@@ -313,6 +325,8 @@ export const useGoalPlanStore = create<GoalPlanStore>((set, get) => ({
         feeling,
         completedChallengeCount: completedChallenges.length,
         createdAt: new Date().toISOString(),
+        adaptation,
+        insight,
       };
 
       const updatedPlans = plans.map((p) => {

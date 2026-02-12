@@ -23,6 +23,40 @@ export type RetroFeeling =
   | "motivated"
   | "neutral";
 
+/** Adaptation adjustments applied after a retro */
+export interface AdaptationResult {
+  /** What changed */
+  adjustments: string[];
+  /** Why it changed */
+  reason: string;
+  /** What to expect */
+  expectation: string;
+  /** Applied difficulty modifier: -1 easier, 0 same, +1 harder */
+  difficultyDelta: -1 | 0 | 1;
+  /** Target duration in minutes (default 10) */
+  targetDurationMinutes: number;
+  /** Whether to add guidance prompts to challenges */
+  addGuidance: boolean;
+  /** Whether to add a stretch/bonus task */
+  addStretchTask: boolean;
+  /** Preferred time of day hint (if detected) */
+  preferredTimeHint?: string;
+}
+
+/** Weekly insight summary computed before retro input */
+export interface WeeklyInsight {
+  completedCount: number;
+  totalCount: number;
+  completionRate: number;
+  /** "morning" | "afternoon" | "evening" | "mixed" */
+  timePattern: string;
+  missedDays: number;
+  /** Human-readable behavioral insight */
+  behavioralInsight: string;
+  /** Days since plan started or last retro */
+  daySpan: number;
+}
+
 export interface WeeklyRetro {
   id: string;
   planId: string;
@@ -30,6 +64,10 @@ export interface WeeklyRetro {
   feeling?: RetroFeeling;
   completedChallengeCount: number;
   createdAt: string;
+  /** Adaptation applied after this retro */
+  adaptation?: AdaptationResult;
+  /** Insight snapshot at time of retro */
+  insight?: WeeklyInsight;
 }
 
 export interface GoalPlan {

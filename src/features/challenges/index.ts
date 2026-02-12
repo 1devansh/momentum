@@ -1,6 +1,7 @@
 /**
  * Challenges feature barrel export
  */
+export { computeAdaptation, computeWeeklyInsight } from "./adaptation";
 export {
     generateChallenges,
     regenerateChallengesWithRetro
@@ -21,11 +22,13 @@ export {
 } from "./store";
 export type { CompletedEntry } from "./store";
 export type {
+    AdaptationResult,
     ChallengeStats,
     GoalPlan,
     GoalPlanState,
     MicroChallenge,
     RetroFeeling,
+    WeeklyInsight,
     WeeklyRetro
 } from "./types";
 

@@ -10,21 +10,21 @@
 import { Href, router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Button, ScreenContainer, WeeklyRetro } from "../../src/components";
 import { COLORS } from "../../src/config";
 import {
-    RETRO_CHALLENGE_THRESHOLD,
-    RetroFeeling,
-    selectChallengesUntilRetro,
-    selectRetroRequired,
-    useGoalPlanStore,
+  RETRO_CHALLENGE_THRESHOLD,
+  RetroFeeling,
+  selectChallengesUntilRetro,
+  selectRetroRequired,
+  useGoalPlanStore,
 } from "../../src/features/challenges";
 import { canDeleteGoalPlan } from "../../src/features/premium";
 import { useSubscription } from "../../src/state";
@@ -103,7 +103,8 @@ export default function GoalDetailScreen() {
   ) => {
     if (!planId) return;
     await submitRetro(planId, reflection, feeling);
-    setShowRetro(false);
+    // Don't dismiss here — WeeklyRetro will show the adaptation result
+    // and dismiss itself when the user taps "Got It"
   };
 
   const handleCompleteGoal = () => {
@@ -280,6 +281,7 @@ export default function GoalDetailScreen() {
 
           {showRetro && (
             <WeeklyRetro
+              plan={plan}
               onSubmit={handleRetroSubmit}
               onDismiss={() => setShowRetro(false)}
               onCompleteGoal={handleCompleteGoal}

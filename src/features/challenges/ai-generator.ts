@@ -11,7 +11,7 @@
 
 import * as Crypto from "expo-crypto";
 import { FALLBACK_CHALLENGES } from "./fallback-challenges";
-import { MicroChallenge, RetroFeeling } from "./types";
+import { AdaptationResult, MicroChallenge, RetroFeeling } from "./types";
 
 const CHALLENGE_COUNT = 7;
 
@@ -21,6 +21,7 @@ export interface RetroContext {
   reflection: string;
   feeling?: RetroFeeling;
   progressStage: string; // e.g. "Sprout", "Sapling"
+  adaptation?: AdaptationResult;
 }
 
 /**
@@ -63,6 +64,38 @@ function buildRetroPrompt(
     ? `They're currently feeling: ${retro.feeling}.`
     : "";
 
+  // Build adaptation instructions from the adaptation result
+  let adaptationHints = "";
+  if (retro.adaptation) {
+    const a = retro.adaptation;
+    const parts: string[] = [];
+    if (a.difficultyDelta === -1)
+      parts.push("- Make challenges EASIER and more approachable");
+    if (a.difficultyDelta === 1)
+      parts.push(
+        "- Make challenges MORE AMBITIOUS and push their comfort zone",
+      );
+    if (a.targetDurationMinutes < 10)
+      parts.push(
+        `- Each challenge should take under ${a.targetDurationMinutes} minutes`,
+      );
+    if (a.addGuidance)
+      parts.push(
+        "- Include step-by-step guidance and tips within each challenge description",
+      );
+    if (a.addStretchTask)
+      parts.push(
+        `- Include 1 bonus stretch challenge that's harder than the rest (generate ${remainingCount + 1} total, mark the last as a stretch)`,
+      );
+    if (a.preferredTimeHint)
+      parts.push(
+        `- Optimize challenges for ${a.preferredTimeHint} completion when possible`,
+      );
+    if (parts.length > 0) {
+      adaptationHints = `\nAdaptation instructions (IMPORTANT — follow these):\n${parts.join("\n")}`;
+    }
+  }
+
   return `Regenerate ${remainingCount} micro-challenges for someone whose goal is: "${goal}".
 Their focus areas are: ${areasStr}.
 
@@ -71,6 +104,7 @@ Progress so far:
 - Character stage: ${retro.progressStage}
 - Their reflection: "${retro.reflection}"
 ${feelingHint}
+${adaptationHints}
 
 Rules:
 - Adapt difficulty based on their progress and feeling
