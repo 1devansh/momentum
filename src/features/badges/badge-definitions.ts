@@ -1,0 +1,140 @@
+/**
+ * Badge & Achievement Definitions
+ *
+ * Shared definitions used by both the progress screen (display)
+ * and the home screen (unlock detection). Keeps badge logic DRY.
+ */
+
+import type { GoalPlan } from "../challenges";
+import { EVOLUTION_STAGES } from "../character";
+
+export interface Badge {
+  id: string;
+  emoji: string;
+  title: string;
+  description: string;
+  category: "Evolution" | "Achievement";
+  earned: boolean;
+}
+
+interface BadgeInput {
+  totalCompleted: number;
+  stageIndex: number;
+  plans: GoalPlan[];
+  completedGoalsCount: number;
+  totalRetros: number;
+  hasNotes: boolean;
+  completedWithNotes: number;
+}
+
+export function computeStageBadges(stageIndex: number): Badge[] {
+  return EVOLUTION_STAGES.map((stage, i) => ({
+    id: `stage-${i}`,
+    emoji: stage.unlocks[0].emoji,
+    title: stage.unlocks[0].title,
+    description: stage.unlocks[0].description,
+    category: "Evolution" as const,
+    earned: i <= stageIndex,
+  }));
+}
+
+export function computeAchievementBadges(input: BadgeInput): Badge[] {
+  const {
+    totalCompleted,
+    plans,
+    completedGoalsCount,
+    totalRetros,
+    hasNotes,
+    completedWithNotes,
+  } = input;
+
+  return [
+    {
+      id: "first-challenge",
+      emoji: "⭐",
+      title: "First Step",
+      description: "Completed your very first challenge.",
+      category: "Achievement" as const,
+      earned: totalCompleted >= 1,
+    },
+    {
+      id: "first-goal-complete",
+      emoji: "🎯",
+      title: "Goal Crusher",
+      description: "Completed an entire goal plan from start to finish.",
+      category: "Achievement" as const,
+      earned: completedGoalsCount >= 1,
+    },
+    {
+      id: "two-goals",
+      emoji: "🌐",
+      title: "Multi-Tasker",
+      description: "Started 2 or more goal plans.",
+      category: "Achievement" as const,
+      earned: plans.length >= 2,
+    },
+    {
+      id: "first-retro",
+      emoji: "🔄",
+      title: "Reflector",
+      description: "Completed your first weekly retro.",
+      category: "Achievement" as const,
+      earned: totalRetros >= 1,
+    },
+    {
+      id: "three-retros",
+      emoji: "🪞",
+      title: "Deep Thinker",
+      description: "Completed 3 weekly retros. Self-awareness is a superpower.",
+      category: "Achievement" as const,
+      earned: totalRetros >= 3,
+    },
+    {
+      id: "first-note",
+      emoji: "📝",
+      title: "Journaler",
+      description: "Left a reflection note on a challenge.",
+      category: "Achievement" as const,
+      earned: hasNotes,
+    },
+    {
+      id: "five-notes",
+      emoji: "📖",
+      title: "Storyteller",
+      description: "Left reflection notes on 5 challenges.",
+      category: "Achievement" as const,
+      earned: completedWithNotes >= 5,
+    },
+    {
+      id: "ten-challenges",
+      emoji: "🔟",
+      title: "Double Digits",
+      description: "Completed 10 challenges. You're in the groove.",
+      category: "Achievement" as const,
+      earned: totalCompleted >= 10,
+    },
+    {
+      id: "three-goals-complete",
+      emoji: "🏆",
+      title: "Hat Trick",
+      description: "Completed 3 goal plans. You finish what you start.",
+      category: "Achievement" as const,
+      earned: completedGoalsCount >= 3,
+    },
+    {
+      id: "twenty-five-challenges",
+      emoji: "💎",
+      title: "Quarter Century",
+      description: "25 challenges completed. Consistency personified.",
+      category: "Achievement" as const,
+      earned: totalCompleted >= 25,
+    },
+  ];
+}
+
+export function computeAllBadges(input: BadgeInput): Badge[] {
+  return [
+    ...computeStageBadges(input.stageIndex),
+    ...computeAchievementBadges(input),
+  ];
+}

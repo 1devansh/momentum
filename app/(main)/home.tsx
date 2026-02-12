@@ -23,12 +23,14 @@ import {
 } from "react-native";
 import ConfettiCannon from "react-native-confetti-cannon";
 import {
+  BadgeCelebration,
   Button,
   EvolutionCelebration,
   GoalCarousel,
   ScreenContainer,
 } from "../../src/components";
 import { COLORS } from "../../src/config";
+import { computeAllBadges, useBadgeStore } from "../../src/features/badges";
 import {
   GoalPlan,
   selectCompletedToday,
@@ -100,6 +102,7 @@ export default function HomeScreen() {
     [character.stageIndex],
   );
   const checkEvolution = useEvolutionStore((s) => s.checkEvolution);
+  const checkBadges = useBadgeStore((s) => s.checkBadges);
 
   const retroRequired = selectRetroRequired(activePlan);
 
@@ -144,9 +147,34 @@ export default function HomeScreen() {
     confettiRef.current?.start();
 
     // After completion, get fresh state and check for evolution
-    const updatedStats = selectStats(useGoalPlanStore.getState().plans);
+    const freshPlans = useGoalPlanStore.getState().plans;
+    const updatedStats = selectStats(freshPlans);
     const newCharacter = computeCharacterState(updatedStats.totalCompleted);
     checkEvolution(newCharacter.stageIndex);
+
+    // Check for newly unlocked badges / achievements
+    const freshHistory = freshPlans.flatMap((p) =>
+      p.challenges.filter((c) => c.completed),
+    );
+    const completedGoalsCount = freshPlans.filter(
+      (p) => p.goalCompletedAt,
+    ).length;
+    const totalRetros = freshPlans.reduce((sum, p) => sum + p.retros.length, 0);
+    const hasNotes = freshHistory.some((c) => c.notes?.trim().length);
+    const completedWithNotes = freshHistory.filter(
+      (c) => c.notes?.trim().length,
+    ).length;
+
+    const allBadges = computeAllBadges({
+      totalCompleted: updatedStats.totalCompleted,
+      stageIndex: newCharacter.stageIndex,
+      plans: freshPlans,
+      completedGoalsCount,
+      totalRetros,
+      hasNotes,
+      completedWithNotes,
+    });
+    checkBadges(allBadges.filter((b) => b.earned));
   };
 
   const handleProgramComplete = () => {
@@ -438,6 +466,7 @@ export default function HomeScreen() {
       />
 
       <EvolutionCelebration />
+      <BadgeCelebration />
     </ScreenContainer>
   );
 }
