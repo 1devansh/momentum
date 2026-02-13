@@ -32,11 +32,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       NSFaceIDUsageDescription:
         "Allow Momentum to use Face ID for app security.",
-      NSCameraUsageDescription:
-        "Allow Momentum to access your camera for profile pictures.",
-      NSPhotoLibraryUsageDescription:
-        "Allow Momentum to access your photo library for profile pictures.",
-      NSMicrophoneUsageDescription: "Microphone access is not required.",
       UIBackgroundModes: ["remote-notification"],
     },
   },
@@ -58,9 +53,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "RECEIVE_BOOT_COMPLETED",
       "SCHEDULE_EXACT_ALARM",
       "POST_NOTIFICATIONS",
-      "CAMERA",
-      "READ_EXTERNAL_STORAGE",
-      "WRITE_EXTERNAL_STORAGE",
     ],
   },
 
